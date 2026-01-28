@@ -32,6 +32,7 @@ class VertexAIClient:
 
     def __init__(
         self,
+        api_key: str | None = None,
         project_id: str | None = None,
         location: str | None = None,
         model: str | None = None,
@@ -42,13 +43,15 @@ class VertexAIClient:
         """Initialize VertexAIClient.
 
         Args:
-            project_id: GCP project ID.
-            location: GCP region.
+            api_key: Google AI API key (alternative to Vertex AI).
+            project_id: GCP project ID (for Vertex AI).
+            location: GCP region (for Vertex AI).
             model: Model name to use.
             max_retries: Maximum retry attempts.
             timeout_seconds: Request timeout.
             max_input_tokens: Maximum input tokens for context.
         """
+        self.api_key = api_key
         self.project_id = project_id or ""
         self.location = location or self.DEFAULT_LOCATION
         self.model = model or self.DEFAULT_MODEL
@@ -59,25 +62,32 @@ class VertexAIClient:
         self._client: Any = None
 
     def _get_client(self) -> Any:
-        """Get or create the Vertex AI client.
+        """Get or create the AI client.
+
+        Uses Google AI API key if provided, otherwise falls back to Vertex AI.
 
         Returns:
             Configured genai client.
 
         Raises:
-            RuntimeError: If Vertex AI is not available.
+            RuntimeError: If AI libraries are not available.
         """
         if not VERTEX_AI_AVAILABLE:
             raise RuntimeError(
-                "Vertex AI libraries not installed. Run: pip install google-cloud-aiplatform"
+                "Google AI libraries not installed. Run: pip install google-genai"
             )
 
         if self._client is None:
-            self._client = genai.Client(
-                vertexai=True,
-                project=self.project_id,
-                location=self.location,
-            )
+            if self.api_key:
+                # Use Google AI Studio with API key
+                self._client = genai.Client(api_key=self.api_key)
+            else:
+                # Use Vertex AI with ADC
+                self._client = genai.Client(
+                    vertexai=True,
+                    project=self.project_id,
+                    location=self.location,
+                )
 
         return self._client
 
