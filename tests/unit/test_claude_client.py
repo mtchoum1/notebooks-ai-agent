@@ -17,7 +17,12 @@ class MockMessage:
 
 
 class TestClaudeClient:
-    """Tests for ClaudeClient."""
+    """Tests for ClaudeClient with API key mode."""
+
+    @pytest.fixture(autouse=True)
+    def disable_vertex_ai(self, monkeypatch):
+        """Ensure Vertex AI mode is disabled for API key tests."""
+        monkeypatch.delenv("CLAUDE_CODE_USE_VERTEX", raising=False)
 
     @pytest.fixture
     def mock_anthropic(self):
@@ -209,6 +214,79 @@ class TestClaudeClient:
         assert "john.doe@example.com" in prompt_text
 
     def test_raises_without_api_key(self) -> None:
-        """Should raise error if API key is not provided."""
+        """Should raise error if API key is not provided and not using Vertex AI."""
         with pytest.raises(ValueError, match="api_key"):
             ClaudeClient(api_key=None)  # type: ignore
+
+
+class TestClaudeClientVertexAI:
+    """Tests for ClaudeClient with Vertex AI."""
+
+    def test_init_with_vertex_ai_env_vars(self, monkeypatch) -> None:
+        """Should initialize with Vertex AI when env vars are set."""
+        monkeypatch.setenv("CLAUDE_CODE_USE_VERTEX", "1")
+        monkeypatch.setenv("ANTHROPIC_VERTEX_PROJECT_ID", "my-gcp-project")
+        monkeypatch.setenv("CLOUD_ML_REGION", "us-east5")
+
+        client = ClaudeClient()
+
+        assert client.use_vertex is True
+        assert client.project_id == "my-gcp-project"
+        assert client.region == "us-east5"
+        assert client.api_key is None
+
+    def test_init_with_vertex_ai_params(self, monkeypatch) -> None:
+        """Should accept project_id and region as parameters."""
+        monkeypatch.setenv("CLAUDE_CODE_USE_VERTEX", "1")
+
+        client = ClaudeClient(
+            project_id="param-project",
+            region="us-central1",
+        )
+
+        assert client.use_vertex is True
+        assert client.project_id == "param-project"
+        assert client.region == "us-central1"
+
+    def test_vertex_ai_requires_project_id(self, monkeypatch) -> None:
+        """Should raise error if Vertex AI mode but no project_id."""
+        monkeypatch.setenv("CLAUDE_CODE_USE_VERTEX", "1")
+        monkeypatch.delenv("ANTHROPIC_VERTEX_PROJECT_ID", raising=False)
+
+        with pytest.raises(ValueError, match="project_id"):
+            ClaudeClient()
+
+    def test_vertex_ai_default_region(self, monkeypatch) -> None:
+        """Should use default region if not specified."""
+        monkeypatch.setenv("CLAUDE_CODE_USE_VERTEX", "1")
+        monkeypatch.setenv("ANTHROPIC_VERTEX_PROJECT_ID", "my-project")
+        monkeypatch.delenv("CLOUD_ML_REGION", raising=False)
+
+        client = ClaudeClient()
+
+        assert client.region == "us-east5"
+
+    @pytest.mark.asyncio
+    async def test_vertex_ai_creates_correct_client(self, monkeypatch) -> None:
+        """Should create AnthropicVertex client in Vertex AI mode."""
+        monkeypatch.setenv("CLAUDE_CODE_USE_VERTEX", "1")
+        monkeypatch.setenv("ANTHROPIC_VERTEX_PROJECT_ID", "my-project")
+
+        with patch("devassist.ai.claude_client.AnthropicVertex") as mock_vertex:
+            client = ClaudeClient()
+            _ = client._get_client()
+
+            mock_vertex.assert_called_once_with(
+                project_id="my-project",
+                region="us-east5",
+            )
+
+    def test_api_key_mode_when_vertex_not_set(self, monkeypatch) -> None:
+        """Should use API key mode when CLAUDE_CODE_USE_VERTEX is not set."""
+        monkeypatch.delenv("CLAUDE_CODE_USE_VERTEX", raising=False)
+
+        client = ClaudeClient(api_key="sk-ant-test")
+
+        assert client.use_vertex is False
+        assert client.api_key == "sk-ant-test"
+        assert client.project_id is None

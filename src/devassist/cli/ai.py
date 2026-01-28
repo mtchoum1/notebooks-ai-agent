@@ -31,6 +31,11 @@ console = Console()
 def get_ai_client(config: MCPConfig):
     """Create AI client based on configuration.
 
+    Supports three modes:
+    1. Vertex AI via CLAUDE_CODE_USE_VERTEX=1 (uses GCP Application Default Credentials)
+    2. Claude API via api_key in config
+    3. Vertex AI (Gemini) via config.ai.provider == "vertex"
+
     Args:
         config: MCP configuration.
 
@@ -38,23 +43,48 @@ def get_ai_client(config: MCPConfig):
         Configured AI client (Claude or Vertex).
 
     Raises:
-        RuntimeError: If no API key configured.
+        RuntimeError: If no valid authentication configured.
     """
+    # Check for Vertex AI mode via environment variable (Claude on Vertex)
+    use_vertex_auth = os.environ.get("CLAUDE_CODE_USE_VERTEX", "").lower() in ("1", "true")
+
     if config.ai.provider == "claude":
         from devassist.ai.claude_client import ClaudeClient
 
-        api_key = config.ai.claude.api_key
-        if not api_key:
-            raise RuntimeError(
-                "Claude API key not configured. "
-                "Set ANTHROPIC_API_KEY or add api_key to .mcp.json"
+        if use_vertex_auth:
+            # Use Vertex AI authentication (GCP ADC)
+            project_id = os.environ.get("ANTHROPIC_VERTEX_PROJECT_ID")
+            region = os.environ.get("CLOUD_ML_REGION", "us-east5")
+
+            if not project_id:
+                raise RuntimeError(
+                    "Vertex AI mode requires ANTHROPIC_VERTEX_PROJECT_ID env var. "
+                    "Run: export ANTHROPIC_VERTEX_PROJECT_ID=your-project-id"
+                )
+
+            return ClaudeClient(
+                model=config.ai.claude.model,
+                max_tokens=config.ai.claude.max_tokens,
+                temperature=config.ai.claude.temperature,
+                project_id=project_id,
+                region=region,
             )
-        return ClaudeClient(
-            api_key=api_key,
-            model=config.ai.claude.model,
-            max_tokens=config.ai.claude.max_tokens,
-            temperature=config.ai.claude.temperature,
-        )
+        else:
+            # Use direct Anthropic API key
+            api_key = config.ai.claude.api_key
+            if not api_key:
+                raise RuntimeError(
+                    "Claude API key not configured. Either:\n"
+                    "  1. Set ANTHROPIC_API_KEY env var, or\n"
+                    "  2. Add api_key to .mcp.json, or\n"
+                    "  3. Set CLAUDE_CODE_USE_VERTEX=1 for Vertex AI auth"
+                )
+            return ClaudeClient(
+                api_key=api_key,
+                model=config.ai.claude.model,
+                max_tokens=config.ai.claude.max_tokens,
+                temperature=config.ai.claude.temperature,
+            )
     else:
         from devassist.ai.vertex_client import VertexAIClient
 
