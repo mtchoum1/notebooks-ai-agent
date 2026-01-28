@@ -23,9 +23,10 @@ class SourceConfig(BaseModel):
 class AIConfig(BaseModel):
     """Configuration for AI service integration."""
 
-    project_id: str = Field("", description="GCP project ID")
-    location: str = Field("us-central1", description="GCP region")
-    model: str = Field("gemini-1.5-flash", description="Model to use")
+    api_key: str | None = Field(None, description="Google AI API key (alternative to Vertex AI)")
+    project_id: str = Field("", description="GCP project ID (for Vertex AI)")
+    location: str = Field("us-central1", description="GCP region (for Vertex AI)")
+    model: str = Field("gemini-2.5-flash", description="Model to use")
     max_retries: int = Field(3, description="Max retry attempts")
     timeout_seconds: int = Field(60, description="Request timeout")
 

@@ -49,6 +49,7 @@ class BriefGenerator:
 
         # Initialize AI client with config
         self._ai_client = ai_client or VertexAIClient(
+            api_key=config.ai.api_key,
             project_id=config.ai.project_id,
             location=config.ai.location,
             model=config.ai.model,
