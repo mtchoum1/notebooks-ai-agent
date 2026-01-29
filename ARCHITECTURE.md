@@ -155,19 +155,34 @@ devassist ai kill                   # Stop runner
 ```
 User CLI Command
     ↓
-AppConfig (unified configuration)
+ClientConfig (unified configuration)
     ↓
 BriefGenerator (orchestration)
     ↓
 ClaudeClient (AI calls via Claude Agent SDK)
     ↓
-MCP Servers (Gmail, Slack, JIRA, GitHub)
+MCP Servers (JIRA, GitHub)
     ↓
-Claude API (AI processing)
+Claude Agent SDK (AI processing)
     ↓
 Brief Model (structured response)
     ↓
 Rich Console (formatted output)
+```
+
+### Background Runner Flow
+```
+devassist ai run
+    ↓
+RunnerManager (process lifecycle)
+    ↓
+Background Process (detached)
+    ↓
+Runner (scheduled execution)
+    ↓
+ClientConfig → ClaudeClient → MCP Servers
+    ↓
+File Output (~/.devassist/runner-output.md)
 ```
 
 ### Session Management Flow
@@ -196,7 +211,7 @@ Response + Updated Session State
 #### CLI Arguments
 ```bash
 devassist brief \
-  --sources gmail,jira \
+  --sources jira,github \
   --model "Opus 4" \
   --timeout 180 \
   --output json
@@ -205,51 +220,71 @@ devassist brief \
 #### Environment Variables
 ```bash
 export DEVASSIST_AI_MODEL="fast"
-export DEVASSIST_SOURCES="gmail,slack"
+export DEVASSIST_SOURCES="jira,github"
 export DEVASSIST_AI_TIMEOUT_SECONDS=120
 ```
 
 #### Configuration File (`~/.devassist/config.yaml`)
 ```yaml
 ai_model: "Sonnet 4"
-sources: ["gmail", "slack", "jira"]
+sources: ["jira", "github"]
 ai_timeout_seconds: 120
 output_format: "markdown"
 source_configs:
-  gmail:
+  jira:
     enabled: true
-    credentials_file: "/path/to/gmail.json"
-  slack:
+    url: "https://yourcompany.atlassian.net"
+    username: "your-email@company.com"
+  github:
     enabled: true
-    token: "xoxb-your-token"
+    token: "your-github-token"
 ```
 
 ## MCP Server Integration
 
 ### Server Configuration
-MCP servers are configured through the resources module and AppConfig:
+MCP servers are configured through the resources module and ClientConfig:
 
-```yaml
-# resources/mcp_servers.yaml
-gmail:
-  command: "docker"
-  args: ["run", "--rm", "mcp-server-gmail"]
-  env:
-    GMAIL_CREDENTIALS_FILE: "${GMAIL_CREDENTIALS_FILE}"
-
-jira:
-  command: "mcp-server-jira"
-  env:
-    JIRA_URL: "${JIRA_URL}"
-    JIRA_EMAIL: "${JIRA_EMAIL}"
-    JIRA_API_TOKEN: "${JIRA_API_TOKEN}"
+```json
+# resources/mcp-servers.json
+{
+  "jira": {
+    "type": "stdio",
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-e", "JIRA_URL",
+      "-e", "JIRA_USERNAME",
+      "-e", "JIRA_PERSONAL_TOKEN",
+      "ghcr.io/sooperset/mcp-atlassian:latest"
+    ],
+    "env": {
+      "JIRA_URL": "",
+      "JIRA_USERNAME": "",
+      "JIRA_PERSONAL_TOKEN": ""
+    }
+  },
+  "github": {
+    "type": "stdio",
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-e", "GITHUB_TOKEN",
+      "quay.io/nsingla/mcp-github-readonly:latest"
+    ],
+    "env": {
+      "GITHUB_TOKEN": ""
+    }
+  }
+}
 ```
 
 ### Environment Variable Substitution
-AppConfig automatically substitutes environment variables in MCP configs:
-- `${GMAIL_CREDENTIALS_FILE}` → actual file path
+ClientConfig automatically maps environment variables to MCP configs:
 - `${JIRA_URL}` → JIRA instance URL
-- `${SLACK_API_TOKEN}` → Slack bot token
+- `${JIRA_USERNAME}` → JIRA username
+- `${JIRA_PERSONAL_TOKEN}` → JIRA API token
+- `${GITHUB_TOKEN}` → GitHub personal access token
 
 ## Storage & Persistence
 
@@ -309,11 +344,13 @@ The old cache system has been deprecated. MCP servers handle their own caching a
 ## Migration from Legacy Architecture
 
 ### What Changed
-- ❌ **ConfigManager** → ✅ **AppConfig**
+- ❌ **ConfigManager** → ✅ **ClientConfig**
 - ❌ **SessionManager** → ✅ **ClaudeClient static sessions**
 - ❌ **CacheManager** → ✅ **MCP server caching**
 - ❌ **Custom Adapters** → ✅ **MCP servers**
-- ❌ **Multiple Config Classes** → ✅ **Single AppConfig**
+- ❌ **Multiple Config Classes** → ✅ **Single ClientConfig**
+- ❌ **Manual Claude API keys** → ✅ **Claude Agent SDK automatic auth**
+- ✅ **NEW**: Background AI runner with process management
 
 ### Migration Benefits
 - **50% fewer classes**: Simpler architecture
@@ -333,11 +370,27 @@ The old cache system has been deprecated. MCP servers handle their own caching a
 ```
 src/devassist/
 ├── ai/                    # Claude Agent SDK integration
+│   ├── claude_client.py   # ClaudeClient with session management
+│   └── prompts.py         # AI prompt templates
 ├── cli/                   # Command-line interface
-├── core/                  # Business logic (BriefGenerator)
-├── models/                # Data models (AppConfig, Brief, etc)
-├── resources/             # System prompts, MCP configs
+│   ├── main.py           # Entry point and status
+│   ├── brief.py          # Brief generation commands
+│   ├── ai.py             # Background runner commands
+│   └── prompt.py         # Prompt management
+├── core/                  # Business logic
+│   ├── brief_generator.py # BriefGenerator
+│   ├── runner.py         # Background AI runner
+│   └── runner_manager.py # Process management
+├── models/                # Data models
+│   ├── config.py         # ClientConfig (unified)
+│   ├── mcp_config.py     # MCP server configs
+│   ├── brief.py          # Brief structures
+│   └── context.py        # Context types and enums
+├── resources/             # Static resources
+│   ├── mcp-servers.json  # MCP server configs
+│   └── personal-assistant.md # System prompt
 └── utils/                 # Utility functions
+    └── process.py        # Process management
 ```
 
 ## Future Extensibility

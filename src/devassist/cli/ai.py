@@ -46,6 +46,7 @@ def run_background_runner() -> None:
     # Read configuration from environment variables (set by CLI)
     interval_minutes = int(os.environ.get("DEVASSIST_RUNNER_INTERVAL", "5"))
     custom_prompt = os.environ.get("DEVASSIST_RUNNER_PROMPT")
+    session_id = os.environ.get("DEVASSIST_RUNNER_SESSION_ID")
 
     # Create configuration and runner
     config = ClientConfig()
@@ -53,6 +54,7 @@ def run_background_runner() -> None:
         config=config,
         interval_minutes=interval_minutes,
         custom_prompt=custom_prompt,
+        session_id=session_id,
     )
 
     # Run the background runner
@@ -141,6 +143,12 @@ def run(
         "-p",
         help="Custom prompt for AI runner",
     ),
+    session_id: str = typer.Option(
+        None,
+        "--session-id",
+        "-s",
+        help="Session ID to continue conversation",
+    ),
     foreground: bool = typer.Option(False, "--foreground", "-f", help="Run in foreground"),
 ) -> None:
     """Start the background AI runner."""
@@ -155,6 +163,8 @@ def run(
     if foreground:
         # Run in foreground
         console.print(f"[blue]Starting AI runner in foreground (interval: {interval}m, Ctrl+C to stop)[/blue]")
+        if session_id:
+            console.print(f"[dim]Using session: {session_id}[/dim]")
         try:
             import asyncio
             config = ClientConfig()
@@ -162,6 +172,7 @@ def run(
                 config=config,
                 interval_minutes=interval,
                 custom_prompt=prompt,
+                session_id=session_id,
             )
             asyncio.run(runner.run())
         except KeyboardInterrupt:
@@ -169,11 +180,13 @@ def run(
     else:
         # Start as background process
         try:
-            runner_manager.start(interval=interval, prompt=prompt)
+            runner_manager.start(interval=interval, prompt=prompt, session_id=session_id)
             status = runner_manager.get_status()
             console.print(f"[green]✓[/green] AI runner started successfully")
             console.print(f"[dim]PID: {status.pid}[/dim]")
             console.print(f"[dim]Interval: {interval} minutes[/dim]")
+            if session_id:
+                console.print(f"[dim]Session: {session_id}[/dim]")
             if prompt:
                 console.print(f"[dim]Custom prompt: {prompt[:50]}{'...' if len(prompt) > 50 else ''}[/dim]")
 

@@ -3,12 +3,15 @@
 Manages Claude sessions and API calls using the Claude Agent SDK.
 """
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, ClassVar
+from devassist.resources import get_mcp_servers_config
 
+from devassist.models import McpServerConfig
 from devassist.models.config import ClientConfig
 
 logger = logging.getLogger(__name__)
@@ -88,19 +91,43 @@ class ClaudeClient:
         # Create session automatically using config
         self.session = self.create_session()
 
+
     def _get_mcp_servers_config(self, resources: list[str] | None = None) -> dict[str, Any]:
-        """Get MCP servers configuration (simplified for current architecture).
+        """Get MCP servers configuration for specified resources.
 
         Args:
-            resources: List of resource names (currently unused).
+            resources: List of resource names (gmail, slack, jira, github).
+                      If None, returns all configured sources.
 
         Returns:
-            Empty dictionary - MCP server configuration needs future implementation.
+            Dictionary of MCP server configurations with environment variables resolved.
         """
-        # TODO: Implement proper MCP server configuration when needed
-        # For now, return empty config to allow Claude Agent SDK to work without MCP servers
-        logger.debug("MCP server configuration not implemented - using empty config")
-        return {}
+        # Load raw MCP config from JSON
+        raw_mcp_config = get_mcp_servers_config()
+
+        # Determine which sources to include
+        enabled_sources = {source.value for source in self.config.enabled_sources}
+        if resources:
+            target_sources = enabled_sources.intersection(set(resources))
+        else:
+            target_sources = enabled_sources
+
+        # Build resolved configuration using McpServerConfig
+        resolved_config = {}
+        for server_name in target_sources:
+            if server_name not in raw_mcp_config:
+                logger.warning(f"MCP config not found for server: {server_name}")
+                continue
+
+            # Create McpServerConfig directly from JSON - field validator will resolve env vars
+            raw_config = raw_mcp_config[server_name]
+            server_config = McpServerConfig(**raw_config)
+
+            # Convert back to dict for Claude SDK
+            resolved_config[server_name] = server_config.model_dump()
+
+        logger.debug(f"Resolved MCP config for {len(resolved_config)} servers: {list(resolved_config.keys())}")
+        return resolved_config
 
     def _init_sdk_client(self) -> Any:
         """Initialize and connect Claude SDK client using config.
@@ -178,7 +205,7 @@ class ClaudeClient:
         user_prompt: str,
         session_id: str | None = None,
     ) -> str:
-        """Make a call to Claude.
+        """Make a call to Claude with configurable timeout.
 
         Args:
             user_prompt: User's prompt/question.
@@ -186,6 +213,9 @@ class ClaudeClient:
 
         Returns:
             Claude's response as a string.
+
+        Raises:
+            asyncio.TimeoutError: If the request exceeds the configured timeout.
         """
         from claude_agent_sdk import AssistantMessage, TextBlock, ThinkingBlock
 
@@ -201,28 +231,42 @@ class ClaudeClient:
         if not sdk_client:
             raise ValueError(f"No SDK client found for session {session.session_id}")
 
-        # Ensure SDK client is connected before first use
-        try:
-            await sdk_client.query(user_prompt, session_id=session.session_id)
-        except Exception as e:
-            # If not connected, try to connect and retry
-            if "Not connected" in str(e) or "connect" in str(e).lower():
-                logger.info(f"Connecting SDK client for session {session.session_id}")
-                await sdk_client.connect()
-                await sdk_client.query(user_prompt, session_id=session.session_id)
-            else:
-                raise
+        # Apply timeout from configuration
+        timeout_seconds = self.config.ai_timeout_seconds
+        logger.debug(f"Using AI timeout: {timeout_seconds}s for session {session.session_id}")
 
-        # Collect response
-        response_parts = []
-        async for message in sdk_client.receive_response():
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        response_parts.append(block.text)
-                    elif isinstance(block, ThinkingBlock):
-                        # Optionally include thinking blocks
-                        logger.debug(f"Claude thinking: {block.thinking[:100]}...")
+        try:
+            # Wrap the entire Claude interaction with timeout
+            async with asyncio.timeout(timeout_seconds):
+                # Ensure SDK client is connected before first use
+                try:
+                    await sdk_client.query(user_prompt, session_id=session.session_id)
+                except Exception as e:
+                    # If not connected, try to connect and retry
+                    if "Not connected" in str(e) or "connect" in str(e).lower():
+                        logger.info(f"Connecting SDK client for session {session.session_id}")
+                        await sdk_client.connect()
+                        await sdk_client.query(user_prompt, session_id=session.session_id)
+                    else:
+                        raise
+
+                # Collect response
+                response_parts = []
+                async for message in sdk_client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                response_parts.append(block.text)
+                            elif isinstance(block, ThinkingBlock):
+                                # Optionally include thinking blocks
+                                logger.debug(f"Claude thinking: {block.thinking[:100]}...")
+
+        except asyncio.TimeoutError:
+            logger.error(f"Claude API call timed out after {timeout_seconds}s for session {session.session_id}")
+            raise asyncio.TimeoutError(
+                f"Claude API call timed out after {timeout_seconds}s. "
+                f"You can increase the timeout with --timeout <seconds> or in your config."
+            )
 
         # Update session
         session.last_used = datetime.now()

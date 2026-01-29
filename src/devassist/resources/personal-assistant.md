@@ -1,6 +1,6 @@
-# Personal Developer Assistant
+# Personal Assistant
 
-You are a personal developer assistant helping with daily work tasks. Your role is to:
+You are a personal assistant helping with daily work tasks. Your role is to:
 
 ## Primary Responsibilities
 

@@ -22,7 +22,7 @@ from devassist.models.context import SourceType
 
 # Import resources functions with safe fallback
 try:
-    from devassist.resources import get_system_prompt
+    from devassist.resources import get_personal_assistant_system_prompt
 except ImportError:
     # Fallback for testing
     def get_system_prompt() -> str:
@@ -64,7 +64,7 @@ class ClientConfig(BaseModel):
         description="AI model to use (user-friendly name)"
     )
     ai_timeout_seconds: int = Field(
-        default=60,
+        default=120,
         description="AI query timeout (10-600 seconds)"
     )
 
@@ -271,7 +271,7 @@ class ClientConfig(BaseModel):
         """Resolve system prompt from various input types."""
         if self.system_prompt is None:
             # Default: load from resources
-            return get_system_prompt()
+            return get_personal_assistant_system_prompt()
 
         if isinstance(self.system_prompt, (str, Path)):
             # Check if it looks like a file path (contains / or \ or ends with common extensions)
@@ -289,11 +289,11 @@ class ClientConfig(BaseModel):
                         return path.read_text(encoding="utf-8")
                     except Exception as e:
                         logger.warning(f"Failed to read system prompt file {path}: {e}")
-                        return get_system_prompt()
+                        return get_personal_assistant_system_prompt()
                 else:
                     # File path specified but doesn't exist - fall back to default
                     logger.warning(f"System prompt file not found: {path}")
-                    return get_system_prompt()
+                    return get_personal_assistant_system_prompt()
 
             # Otherwise treat as direct string content
             return str(self.system_prompt)

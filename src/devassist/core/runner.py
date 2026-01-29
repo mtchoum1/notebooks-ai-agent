@@ -5,13 +5,13 @@ Executes custom prompts on a scheduled interval using ClaudeClient and configura
 
 import asyncio
 import logging
-import os
 import signal
 from datetime import datetime
 from pathlib import Path
 
 from devassist.ai.claude_client import ClaudeClient
 from devassist.models.config import ClientConfig
+from devassist.resources import get_dev_assistant_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -29,28 +29,44 @@ class Runner:
     def __init__(
         self,
         config: ClientConfig | None = None,
-        claude_client: ClaudeClient | None = None,
         interval_minutes: int = 5,
         custom_prompt: str | None = None,
         output_file: Path | str | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Initialize the background runner.
 
         Args:
             config: Client configuration.
-            claude_client: Claude client instance.
             interval_minutes: Interval between executions in minutes.
             custom_prompt: Custom prompt to execute.
             output_file: Output file path.
+            session_id: Existing session ID to continue conversations. If None, creates new session.
         """
         self.config = config or ClientConfig()
-        self.claude_client = claude_client or ClaudeClient(config=self.config)
+        if not self.config.system_prompt:
+            self.config.system_prompt = get_dev_assistant_system_prompt()
+        self.claude_client = ClaudeClient(config=self.config)
         self.interval_minutes = interval_minutes
         self.custom_prompt = custom_prompt or "Review my recent context and summarize urgent items requiring attention."
 
         if output_file is None:
             output_file = self.config.workspace_dir / "runner-output.md"
         self.output_file = Path(output_file)
+
+        # Session management for conversation continuity
+        if session_id:
+            # Try to use existing session
+            existing_session = ClaudeClient.get_session_by_id(session_id)
+            if existing_session:
+                self.session_id = session_id
+                logger.info(f"Using existing session: {session_id}")
+            else:
+                logger.warning(f"Session {session_id} not found, creating new session")
+                self.session_id = self.claude_client.session.session_id
+        else:
+            # Use the session created by claude_client
+            self.session_id = self.claude_client.session.session_id
 
         # Ensure output directory exists
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -106,21 +122,64 @@ class Runner:
             # Generate timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # Build the full prompt
+            # Build the full prompt with size optimization
             full_prompt = f"""[DevAssist Background Runner - {timestamp}]
 
 {self.custom_prompt}
 
-Please provide a concise summary focusing on items that need immediate attention."""
+    Please provide a very concise summary focusing only on the most urgent items requiring immediate attention."""
 
-            # Execute with Claude Agent SDK
-            logger.debug("Executing prompt with Claude...")
-            response = await self.claude_client.make_call(user_prompt=full_prompt)
+            # Execute with Claude Agent SDK using session for continuity
+            logger.debug(f"Executing prompt with Claude (session: {self.session_id})...")
 
-            # Write to output file
-            await self._write_output(timestamp, response)
+            try:
+                response = await self.claude_client.make_call(
+                    user_prompt=full_prompt,
+                    session_id=self.session_id
+                )
 
-            logger.debug("Prompt execution completed")
+                # Write to output file
+                await self._write_output(timestamp, response)
+                logger.debug("Prompt execution completed")
+
+            except Exception as sdk_error:
+                # Check if it's a buffer size error and handle gracefully
+                error_msg = str(sdk_error).lower()
+                if "buffer size" in error_msg or "json message exceeded" in error_msg:
+                    logger.warning("Context data too large, trying with reduced scope...")
+
+                    # Try with a more restrictive prompt
+                    fallback_prompt = f"""[DevAssist Background Runner - {timestamp}]
+
+Due to large data volume, please provide ONLY:
+1. Most urgent JIRA issues assigned to me (max 3)
+2. Critical emails from today (max 2)
+3. Any high-priority Slack notifications
+
+Keep response under 300 words total."""
+
+                    try:
+                        response = await self.claude_client.make_call(
+                            user_prompt=fallback_prompt,
+                            session_id=self.session_id
+                        )
+
+                        response = f"⚠️ **Large dataset detected - showing prioritized summary:**\n\n{response}"
+                        await self._write_output(timestamp, response)
+                        logger.info("Fallback execution completed with reduced scope")
+
+                    except Exception as fallback_error:
+                        # If fallback also fails, write a helpful error
+                        logger.error(f"Both primary and fallback execution failed: {fallback_error}")
+                        await self._write_error(
+                            f"Context data too large for processing. "
+                            f"Consider reducing enabled sources or contact frequency.\n\n"
+                            f"Original error: {sdk_error}\n"
+                            f"Fallback error: {fallback_error}"
+                        )
+                else:
+                    # Re-raise non-buffer-related errors
+                    raise sdk_error
 
         except Exception as e:
             logger.error(f"Failed to execute prompt: {e}")
@@ -187,3 +246,125 @@ Please check the logs for more details.
         """Request the runner to stop."""
         logger.info("Stop requested")
         self._stop_requested = True
+
+    def get_session_id(self) -> str:
+        """Get the current session ID for this runner.
+
+        Returns:
+            Current session ID.
+        """
+        return self.session_id
+
+
+async def main():
+    """Main method for debugging Runner in IDE.
+
+    This allows you to run the background runner directly for debugging purposes.
+    Make sure to set your environment variables for source access:
+
+    export JIRA_URL="https://your-jira-instance.com"
+    export JIRA_USERNAME="your-email@company.com"
+    export JIRA_PERSONAL_TOKEN="your-jira-token"
+    export GITHUB_TOKEN="your-github-token"
+    """
+    import logging
+
+    # Setup detailed logging for debugging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler("runner-debug.log")
+        ]
+    )
+
+    try:
+        print("🚀 Starting DevAssist Background Runner (Debug Mode)")
+        print("=" * 60)
+
+        # Create configuration
+        config = ClientConfig()
+        print(f"📋 Runner Configuration:")
+        print(f"   • AI Model: {config.ai_model}")
+        print(f"   • Enabled Sources: {[s.value for s in config.enabled_sources]}")
+        print(f"   • Workspace: {config.workspace_dir}")
+        print(f"   • Timeout: {config.ai_timeout_seconds}s")
+        print()
+
+        # Create runner with debug settings
+        runner = Runner(
+            config=config,
+            interval_minutes=2,  # Quick interval for debugging
+            custom_prompt="Debug run: Please provide a brief summary of highest priority jira tickets assigned to me in the current sprint (max 3 items)",
+            output_file=config.workspace_dir / "runner-debug-output.md"
+        )
+
+        print("🤖 Created Runner instance")
+        print(f"📁 Debug output file: {runner.output_file}")
+        print(f"🔗 Session ID: {runner.session_id}")
+        print()
+
+        # Run for a limited time in debug mode
+        print("⏱️  Running for 3 executions (Ctrl+C to stop early)...")
+
+        execution_count = 0
+        max_executions = 3
+
+        while not runner._stop_requested and execution_count < max_executions:
+            execution_count += 1
+            print(f"\n🔄 Starting debug execution #{execution_count}")
+
+            try:
+                await runner._execute_prompt()
+                print(f"✅ Debug execution #{execution_count} completed successfully")
+
+                # Show output snippet
+                if runner.output_file.exists():
+                    content = runner.output_file.read_text()[:200]
+                    print(f"📄 Output preview: {content}...")
+
+            except Exception as e:
+                print(f"❌ Debug execution #{execution_count} failed: {e}")
+                logger.exception("Debug execution failed")
+
+            if execution_count < max_executions:
+                print(f"⏳ Waiting 10 seconds before next execution...")
+                await asyncio.sleep(10)
+
+        print(f"\n🎉 Debug session complete! ({execution_count}/{max_executions} executions)")
+        print(f"📁 Full output available at: {runner.output_file}")
+
+        # Show final output
+        if runner.output_file.exists():
+            print("\n📋 Final Output:")
+            print("-" * 40)
+            print(runner.output_file.read_text())
+            print("-" * 40)
+
+    except KeyboardInterrupt:
+        print("\n⏹️  Debug session interrupted by user")
+    except Exception as e:
+        print(f"❌ Error during runner debug:")
+        print(f"   {type(e).__name__}: {e}")
+        logger.exception("Runner debug failed")
+
+        # Show configuration for debugging
+        try:
+            config = ClientConfig()
+            print(f"\n🔧 Configuration Debug:")
+            print(f"   • Available sources: {[s.value for s in config.get_available_sources()]}")
+            print(f"   • Enabled sources: {[s.value for s in config.enabled_sources]}")
+        except Exception as config_e:
+            print(f"   Failed to load config: {config_e}")
+
+        raise
+
+
+if __name__ == "__main__":
+    # Run the main function for debugging
+    print("🐛 DevAssist Background Runner - Debug Mode")
+    print("Make sure you have set the required environment variables!")
+    print()
+
+    asyncio.run(main())
