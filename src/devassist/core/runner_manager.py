@@ -94,11 +94,16 @@ class RunnerManager:
         pid = read_pid_file(self.pid_file)
         return RunnerStatus(status="running", pid=pid)
 
-    def start(self, target: str = "devassist.cli.ai:run_background_runner") -> None:
+    def start(
+        self,
+        interval: int | None = None,
+        prompt: str | None = None,
+    ) -> None:
         """Start the background runner process.
 
         Args:
-            target: Module path to the runner function (unused, kept for API compat).
+            interval: Interval in minutes between executions.
+            prompt: Custom prompt to execute.
 
         Raises:
             RuntimeError: If runner is already running or cannot acquire lock.
@@ -113,11 +118,17 @@ class RunnerManager:
 
         try:
             # Use subprocess to spawn a truly independent process
-            # This runs: python -c "from devassist.cli.ai import run_background_runner; run_background_runner()"
             log_path = self.get_log_path()
 
             # Open log file for stdout/stderr redirection
             log_file = open(log_path, "a")
+
+            # Pass CLI options via environment variables
+            env = os.environ.copy()
+            if interval is not None:
+                env["DEVASSIST_RUNNER_INTERVAL"] = str(interval)
+            if prompt is not None:
+                env["DEVASSIST_RUNNER_PROMPT"] = prompt
 
             process = subprocess.Popen(
                 [
@@ -129,6 +140,7 @@ class RunnerManager:
                 stderr=log_file,
                 stdin=subprocess.DEVNULL,
                 start_new_session=True,  # Detach from parent process group
+                env=env,
             )
 
             # Write PID file

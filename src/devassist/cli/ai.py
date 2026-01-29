@@ -114,6 +114,10 @@ def run_background_runner() -> None:
 
     This function is called in a separate process and runs the runner loop.
     Uses AgentClient for automatic session management.
+
+    Reads CLI options from environment variables:
+    - DEVASSIST_RUNNER_INTERVAL: Interval in minutes
+    - DEVASSIST_RUNNER_PROMPT: Custom prompt
     """
     import asyncio
     import logging
@@ -134,6 +138,16 @@ def run_background_runner() -> None:
     if not isinstance(config, MCPConfig):
         logging.error("Legacy config.yaml not supported for runner. Use .mcp.json")
         return
+
+    # Override config with environment variables (from CLI flags)
+    if interval_str := os.environ.get("DEVASSIST_RUNNER_INTERVAL"):
+        try:
+            config.runner.interval_minutes = int(interval_str)
+        except ValueError:
+            logging.warning(f"Invalid interval value: {interval_str}")
+
+    if prompt := os.environ.get("DEVASSIST_RUNNER_PROMPT"):
+        config.runner.prompt = prompt
 
     # Create AgentClient with session management
     ai_client = get_agent_client()
@@ -232,7 +246,7 @@ def run_runner(
     else:
         # Run in background
         try:
-            runner_manager.start()
+            runner_manager.start(interval=interval, prompt=prompt)
             status = runner_manager.get_status()
 
             console.print(
