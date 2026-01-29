@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from devassist.ai.agent_client import AgentClient
 from devassist.ai.base_client import BaseAIClient
 from devassist.ai.prompts import get_runner_system_prompt
 from devassist.core.aggregator import ContextAggregator
@@ -34,7 +35,7 @@ class Runner:
         self,
         config: MCPConfig,
         workspace_dir: Path | str | None = None,
-        ai_client: BaseAIClient | None = None,
+        ai_client: BaseAIClient | AgentClient | None = None,
         aggregator: ContextAggregator | None = None,
     ) -> None:
         """Initialize Runner.
@@ -42,7 +43,7 @@ class Runner:
         Args:
             config: MCP configuration.
             workspace_dir: Path to workspace directory.
-            ai_client: AI client for prompt execution.
+            ai_client: AI client for prompt execution (BaseAIClient or AgentClient).
             aggregator: Context aggregator for fetching items.
         """
         if workspace_dir is None:
@@ -60,7 +61,9 @@ class Runner:
         # State
         self.running = False
         self.last_run: datetime | None = None
-        self.last_result: str | None = None  # Store previous result for comparison
+
+        # Check if using AgentClient (has session management)
+        self.use_agent_sdk = isinstance(ai_client, AgentClient)
 
         # Ensure output directory exists
         self.output_destination.parent.mkdir(parents=True, exist_ok=True)
@@ -85,26 +88,33 @@ class Runner:
                 except Exception as e:
                     logger.error(f"Error fetching context: {e}")
 
-            # Format context for AI (includes previous result for comparison)
+            # Format context for AI
             context = self._format_context(items)
 
-            # Execute prompt with AI using runner-specific system prompt
+            # Execute prompt with AI
             if not self.ai_client:
                 logger.warning("No AI client configured")
                 return None
 
-            result = await self.ai_client.execute_prompt(
-                self.prompt,
-                context,
-                system_prompt=get_runner_system_prompt(),
-            )
+            if self.use_agent_sdk:
+                # AgentClient handles session/history automatically
+                result = await self.ai_client.execute_prompt(
+                    self.prompt,
+                    context,
+                )
+            else:
+                # BaseAIClient needs system prompt passed explicitly
+                result = await self.ai_client.execute_prompt(
+                    self.prompt,
+                    context,
+                    system_prompt=get_runner_system_prompt(),
+                )
 
             # Write output
             self._write_output(result)
 
             # Update state
             self.last_run = datetime.now()
-            self.last_result = result
 
             logger.info("Runner task completed successfully")
             return result
@@ -179,7 +189,7 @@ class Runner:
             items: List of context items.
 
         Returns:
-            Dictionary with formatted context data including previous result.
+            Dictionary with formatted context data.
         """
         return {
             "items": [
@@ -196,8 +206,6 @@ class Runner:
             ],
             "count": len(items),
             "timestamp": datetime.now().isoformat(),
-            "previous_result": self.last_result,
-            "last_run": self.last_run.isoformat() if self.last_run else None,
         }
 
     def _write_output(self, output: str) -> None:

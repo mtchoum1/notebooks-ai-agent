@@ -14,6 +14,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from devassist.ai.agent_client import AgentClient
+from devassist.ai.prompts import get_runner_system_prompt
 from devassist.core.config_manager import ConfigManager
 from devassist.core.runner_manager import RunnerManager
 from devassist.models.mcp_config import MCPConfig
@@ -96,10 +98,22 @@ def get_ai_client(config: MCPConfig):
         )
 
 
+def get_agent_client() -> AgentClient:
+    """Create an AgentClient with session management.
+
+    Returns:
+        Configured AgentClient.
+    """
+    return AgentClient(
+        system_prompt=get_runner_system_prompt(),
+    )
+
+
 def run_background_runner() -> None:
     """Entry point for background runner process.
 
     This function is called in a separate process and runs the runner loop.
+    Uses AgentClient for automatic session management.
     """
     import asyncio
     import logging
@@ -121,12 +135,8 @@ def run_background_runner() -> None:
         logging.error("Legacy config.yaml not supported for runner. Use .mcp.json")
         return
 
-    # Create AI client
-    try:
-        ai_client = get_ai_client(config)
-    except RuntimeError as e:
-        logging.error(f"Failed to create AI client: {e}")
-        return
+    # Create AgentClient with session management
+    ai_client = get_agent_client()
 
     # Create aggregator
     aggregator = ContextAggregator()
@@ -183,13 +193,6 @@ def run_runner(
     if prompt is not None:
         config.runner.prompt = prompt
 
-    # Check AI configuration
-    try:
-        get_ai_client(config)
-    except RuntimeError as e:
-        console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
-
     # Create runner manager
     runner_manager = RunnerManager()
 
@@ -205,6 +208,7 @@ def run_runner(
         console.print("[bold]Starting AI runner in foreground...[/bold]")
         console.print(f"  Interval: {config.runner.interval_minutes} minutes")
         console.print(f"  Prompt: {config.runner.prompt[:50]}...")
+        console.print("  Session: Managed by Agent SDK (auto-resume)")
         console.print("\nPress Ctrl+C to stop.\n")
 
         import asyncio
@@ -212,7 +216,7 @@ def run_runner(
         from devassist.core.aggregator import ContextAggregator
         from devassist.core.runner import Runner
 
-        ai_client = get_ai_client(config)
+        ai_client = get_agent_client()
         aggregator = ContextAggregator()
         runner = Runner(
             config=config,
@@ -288,6 +292,10 @@ def show_status() -> None:
 
     status = runner_manager.get_status()
 
+    # Check session status
+    agent_client = get_agent_client()
+    has_session = agent_client.session_id is not None
+
     # Build status table
     table = Table(show_header=False, box=None)
     table.add_column("Key", style="cyan")
@@ -300,12 +308,12 @@ def show_status() -> None:
 
     if isinstance(config, MCPConfig):
         table.add_row("Interval", f"{config.runner.interval_minutes} minutes")
-        table.add_row("AI Provider", config.ai.provider.title())
+        table.add_row("AI Provider", "Claude Agent SDK")
 
-        if config.runner.last_run:
-            table.add_row("Last Run", config.runner.last_run)
+        if has_session:
+            table.add_row("Session", f"[green]Active[/green] ({agent_client.session_id[:8]}...)")
         else:
-            table.add_row("Last Run", "[dim]Never[/dim]")
+            table.add_row("Session", "[dim]None (will create on first run)[/dim]")
 
         table.add_row("Output File", config.runner.output_destination)
 
@@ -369,3 +377,21 @@ def show_logs(
                 console.print(line)
         else:
             console.print("[yellow]Log file is empty.[/yellow]")
+
+
+@app.command("clear")
+def clear_session() -> None:
+    """Clear the runner session (conversation history).
+
+    This resets the conversation history so the next run starts fresh.
+    Use this at the start of a new day or when you want a clean slate.
+    """
+    agent_client = get_agent_client()
+
+    # Check if there's a session to clear
+    if agent_client.session_id:
+        agent_client.clear_session()
+        console.print("[green]Session cleared successfully.[/green]")
+        console.print("The next run will start a fresh conversation.")
+    else:
+        console.print("[yellow]No active session to clear.[/yellow]")
