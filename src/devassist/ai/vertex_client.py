@@ -9,16 +9,39 @@ from typing import Any
 from devassist.ai.prompts import NO_ITEMS_SUMMARY, build_summarization_prompt, get_system_prompt
 from devassist.models.context import ContextItem
 
-# Google Cloud AI imports - optional, checked at runtime
-try:
-    from google import genai
-    from google.genai import types
+# Google Cloud AI imports are done lazily to avoid initialization issues
+# when using other LLM providers (e.g., Anthropic on Vertex)
+_genai_module = None
+_types_module = None
 
-    VERTEX_AI_AVAILABLE = True
-except ImportError:
-    VERTEX_AI_AVAILABLE = False
-    genai = None  # type: ignore
-    types = None  # type: ignore
+
+def _get_genai():
+    """Lazily import google.genai to avoid initialization at module load."""
+    global _genai_module
+    if _genai_module is None:
+        try:
+            from google import genai
+            _genai_module = genai
+        except ImportError:
+            _genai_module = False
+    return _genai_module if _genai_module else None
+
+
+def _get_types():
+    """Lazily import google.genai.types."""
+    global _types_module
+    if _types_module is None:
+        try:
+            from google.genai import types
+            _types_module = types
+        except ImportError:
+            _types_module = False
+    return _types_module if _types_module else None
+
+
+def _is_vertex_available() -> bool:
+    """Check if Vertex AI is available."""
+    return _get_genai() is not None
 
 
 class VertexAIClient:
@@ -67,7 +90,8 @@ class VertexAIClient:
         Raises:
             RuntimeError: If Vertex AI is not available.
         """
-        if not VERTEX_AI_AVAILABLE:
+        genai = _get_genai()
+        if not genai:
             raise RuntimeError(
                 "Vertex AI libraries not installed. Run: pip install google-cloud-aiplatform"
             )
@@ -122,10 +146,11 @@ class VertexAIClient:
         Returns:
             Generated content string.
         """
-        if not VERTEX_AI_AVAILABLE:
+        if not _is_vertex_available():
             # Fallback for testing without Vertex AI
             return "AI summarization unavailable. Please configure Vertex AI."
 
+        types = _get_types()
         client = self._get_client()
 
         # Run in thread pool since google-genai may be sync

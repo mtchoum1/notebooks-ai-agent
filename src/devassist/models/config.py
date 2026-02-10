@@ -38,6 +38,15 @@ class PreferencesConfig(BaseModel):
     )
 
 
+class MCPServerConfig(BaseModel):
+    """Configuration for an MCP server."""
+
+    command: str = Field("npx", description="Command to run the server")
+    args: list[str] = Field(default_factory=list, description="Command arguments")
+    env: dict[str, str] = Field(default_factory=dict, description="Environment variables")
+    enabled: bool = Field(True, description="Whether server is enabled")
+
+
 class AppConfig(BaseModel):
     """Main application configuration."""
 
@@ -50,6 +59,9 @@ class AppConfig(BaseModel):
     ai: AIConfig = Field(default_factory=AIConfig, description="AI configuration")
     preferences: PreferencesConfig = Field(
         default_factory=PreferencesConfig, description="User preferences"
+    )
+    mcp_servers: dict[str, dict[str, Any]] = Field(
+        default_factory=dict, description="MCP server configurations"
     )
 
     def get_workspace_path(self) -> Path:

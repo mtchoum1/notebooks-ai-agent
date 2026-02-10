@@ -165,3 +165,36 @@ class ConfigManager:
         """
         config = self._config or self.load_config()
         return list(config.sources.keys())
+
+    def get_ai_config(self) -> dict[str, Any]:
+        """Get AI configuration.
+
+        Returns:
+            AI configuration dict.
+        """
+        config = self._config or self.load_config()
+        return config.ai.model_dump() if config.ai else {}
+
+    def get_mcp_config(self) -> dict[str, Any]:
+        """Get MCP servers configuration.
+
+        Returns:
+            MCP configuration dict with server configs.
+        """
+        config = self._config or self.load_config()
+        return getattr(config, "mcp_servers", {}) or {}
+
+    def set_mcp_server_config(
+        self, server_name: str, server_config: dict[str, Any]
+    ) -> None:
+        """Set configuration for an MCP server.
+
+        Args:
+            server_name: Name of the MCP server.
+            server_config: Configuration dict for the server.
+        """
+        config = self._config or self.load_config()
+        if not hasattr(config, "mcp_servers") or config.mcp_servers is None:
+            config.mcp_servers = {}
+        config.mcp_servers[server_name] = server_config
+        self.save_config(config)

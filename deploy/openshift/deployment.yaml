@@ -1,0 +1,108 @@
+---
+# DevAssist Deployment for OpenShift
+# Deploys the daemon worker that monitors CVEs and generates briefs
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devassist-worker
+  labels:
+    app: devassist
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devassist
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: devassist
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: quay.io/ayutiwar/devassist:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            # Interval between brief generations (in minutes)
+            - name: DEVASSIST_INTERVAL_MINUTES
+              value: "60"
+            
+            # User ID for the briefs
+            - name: DEVASSIST_USER_ID
+              value: "ayutiwar"
+            
+            # Sources to monitor
+            - name: DEVASSIST_SOURCES
+              value: "jira,github"
+            
+            # Storage backend
+            - name: DEVASSIST_STORAGE
+              value: "postgres"
+            
+            # Database connection (from secret)
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: devassist-secrets
+                  key: database-url
+            
+            # Claude on Vertex AI (Red Hat setup)
+            - name: CLAUDE_CODE_USE_VERTEX
+              value: "1"
+            - name: CLOUD_ML_REGION
+              value: "us-east5"
+            - name: ANTHROPIC_VERTEX_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: devassist-secrets
+                  key: gcp-project-id
+            
+            # GitHub token (from secret)
+            - name: GITHUB_PERSONAL_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: devassist-secrets
+                  key: github-token
+            
+            # JIRA credentials (from secret)
+            - name: JIRA_BASE_URL
+              value: "https://issues.redhat.com"
+            - name: JIRA_PAT
+              valueFrom:
+                secretKeyRef:
+                  name: devassist-secrets
+                  key: jira-pat
+          
+          # Mount GCP credentials
+          volumeMounts:
+            - name: gcp-credentials
+              mountPath: /app/.config/gcloud
+              readOnly: true
+      
+      volumes:
+        - name: gcp-credentials
+          secret:
+            secretName: devassist-gcp-credentials
+            optional: true
+      
+      # Service account for GCP Workload Identity (if configured)
+      serviceAccountName: devassist-sa
+
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: devassist-sa
+  labels:
+    app: devassist
