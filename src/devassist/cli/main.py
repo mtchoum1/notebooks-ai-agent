@@ -69,37 +69,32 @@ def main(
 @app.command()
 def status() -> None:
     """Show current configuration status."""
-    from devassist.models.config import ClientConfig
+    from devassist.core.config_manager import ConfigManager
 
-    # Load config from CLI args and files
-    config = ClientConfig()
+    manager = ConfigManager()
+    sources = manager.list_sources()
 
     console.print(f"\n[bold]DevAssist v{__version__}[/bold]\n")
-    console.print(f"Workspace: {config.workspace_dir}")
-    console.print(f"Config: {config.workspace_dir / 'config.yaml'}")
+    console.print(f"Workspace: {manager.workspace_dir}")
+    console.print(f"Config: {manager.config_path}")
 
-    enabled_sources = config.enabled_sources
-    if enabled_sources:
-        sources_str = ", ".join([source.value for source in enabled_sources])
-        console.print(f"\nEnabled sources: {sources_str}")
-        console.print(f"AI Model: [cyan]{config.ai_model}[/cyan]")
+    if sources:
+        console.print(f"\nConfigured sources: {', '.join(sources)}")
     else:
-        console.print("\n[dim]No sources enabled yet.[/dim]")
-        console.print("Configure sources through [bold]config.yaml[/bold] or environment variables.\n")
+        console.print("\n[dim]No sources configured yet.[/dim]")
+        console.print("Run [bold]devassist config add <source>[/bold] to get started.\n")
 
 
 # Import and register sub-commands
-from devassist.cli.ai import app as ai_app
 from devassist.cli.brief import app as brief_app
-from devassist.cli.prompt import app as prompt_app
+from devassist.cli.config import app as config_app
 from devassist.cli.ask import ask as ask_command
 from devassist.cli.chat import chat as chat_command
 from devassist.cli.setup import app as setup_app
 
 # Register subcommands
-app.add_typer(ai_app, name="ai")
+app.add_typer(config_app, name="config")
 app.add_typer(brief_app, name="brief")
-app.add_typer(prompt_app, name="prompt")
 app.add_typer(setup_app, name="setup", help="Configure DevAssist connections")
 app.command(name="ask")(ask_command)
 app.command(name="chat")(chat_command)
