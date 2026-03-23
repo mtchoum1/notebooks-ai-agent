@@ -1,0 +1,116 @@
+---
+# PostgreSQL Database for DevAssist
+# Stores morning briefs and CVE tracking data
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devassist-db
+  labels:
+    app: devassist
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devassist
+      component: database
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: devassist
+        component: database
+    spec:
+      containers:
+        - name: postgres
+          image: registry.redhat.io/rhel9/postgresql-15:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRESQL_USER
+              value: devassist
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devassist-db-credentials
+                  key: password
+            - name: POSTGRESQL_DATABASE
+              value: devassist
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/pgsql/data
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U devassist -d devassist
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U devassist -d devassist
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: devassist-db-pvc
+
+---
+# Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: devassist-db
+  labels:
+    app: devassist
+    component: database
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: devassist
+    component: database
+
+---
+# Persistent Volume Claim for database storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: devassist-db-pvc
+  labels:
+    app: devassist
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# Database credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: devassist-db-credentials
+  labels:
+    app: devassist
+    component: database
+type: Opaque
+stringData:
+  password: "devassist-secure-password-change-me"
