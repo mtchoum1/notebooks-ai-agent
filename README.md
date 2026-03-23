@@ -37,11 +37,8 @@ pip install -e ".[dev]"
 # GitHub MCP (required)
 npm install -g @modelcontextprotocol/server-github
 
-# Atlassian MCP (for Jira/Confluence)
-npm install -g mcp-atlassian jsdom
-
-# Slack MCP (optional)
-npm install -g @modelcontextprotocol/server-slack
+# Atlassian MCP: `npx -y mcp-remote https://mcp.atlassian.com/v1/mcp` (no global install required)
+# Same transport as Cursor `mcp.json`; Node.js 18+ on PATH is enough.
 ```
 
 ### 3. Configure Credentials
@@ -72,15 +69,12 @@ export ANTHROPIC_VERTEX_PROJECT_ID=your-gcp-project
 # Scopes needed: repo, notifications, read:user
 export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_xxx"
 
-# Atlassian/Jira (optional)
+# Atlassian API (optional — only for `devassist brief` Jira/Confluence adapters;
+# `devassist ask` / `chat -s atlassian` uses remote MCP and does not need these)
 # Get token: https://id.atlassian.com/manage-profile/security/api-tokens
 export ATLASSIAN_BASE_URL="https://your-site.atlassian.net"
 export ATLASSIAN_EMAIL="your-email@example.com"
 export ATLASSIAN_API_TOKEN="your-atlassian-token"
-
-# Slack (optional)
-export SLACK_BOT_TOKEN="xoxb-xxx"
-export SLACK_TEAM_ID="T027F3GAJ"
 EOF
 
 chmod 600 ~/.devassist/.env
@@ -161,7 +155,7 @@ The daemon generates briefs at:
 src/devassist/
 ├── cli/           # Typer CLI commands (ask, chat, setup)
 ├── core/          # Business logic (aggregator, ranker, brief_generator)
-├── adapters/      # Legacy adapters (gmail, slack, jira, github)
+├── adapters/      # Context source adapters (gmail, slack, jira, github)
 ├── mcp/           # MCP client and server registry
 ├── orchestrator/  # LLM orchestration agent
 ├── ai/            # Vertex AI integration
@@ -174,9 +168,7 @@ src/devassist/
 | Server | Package | Purpose |
 |--------|---------|---------|
 | GitHub | `@modelcontextprotocol/server-github` | PRs, issues, repos |
-| Atlassian | `mcp-atlassian` | Jira issues, Confluence pages |
-| Slack | `@modelcontextprotocol/server-slack` | Messages, channels |
-| Jira (legacy) | `mcp-jira-server` | Self-hosted Jira |
+| Atlassian | `mcp-remote` → `https://mcp.atlassian.com/v1/mcp` | Jira, Confluence (hosted MCP) |
 
 ## Troubleshooting
 
@@ -184,10 +176,10 @@ src/devassist/
 - Run `devassist setup status` to check configuration
 - Ensure environment variables are set: `source ~/.devassist/.env`
 
-### Atlassian MCP timeout errors
-- The `mcp-atlassian` package has verbose logging that may cause timeouts
-- Try setting `NO_COLOR=1` before running
-- Jira searches may take 30-60 seconds
+### Atlassian MCP slow or auth issues
+- First run downloads `mcp-remote`; ensure outbound HTTPS is allowed
+- Authentication follows Atlassian’s remote MCP flow (browser/OAuth as prompted by the connector)
+- Large Jira searches may take 30–60 seconds
 
 ### GitHub MCP asks for repo details
 - Use specific search syntax: "Search for PRs using is:pr is:open review-requested:@me"
@@ -228,9 +220,9 @@ ruff check src/
 | `CLAUDE_CODE_USE_VERTEX` | Yes* | Set to `1` for Vertex AI |
 | `ANTHROPIC_VERTEX_PROJECT_ID` | Yes* | GCP project ID for Vertex AI |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | Yes | GitHub PAT with repo, notifications scopes |
-| `ATLASSIAN_BASE_URL` | No | e.g., `https://redhat.atlassian.net` |
-| `ATLASSIAN_EMAIL` | No | Your Atlassian email |
-| `ATLASSIAN_API_TOKEN` | No | Atlassian API token |
+| `ATLASSIAN_BASE_URL` | No | Optional; for `devassist brief` Jira adapter (not MCP remote) |
+| `ATLASSIAN_EMAIL` | No | Optional; same |
+| `ATLASSIAN_API_TOKEN` | No | Optional; same |
 | `SLACK_BOT_TOKEN` | No | Slack bot token (xoxb-...) |
 | `SLACK_TEAM_ID` | No | Slack workspace ID |
 

@@ -7,6 +7,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from devassist.ai.vertex_client import VertexAIClient
+from devassist.models.config import DEFAULT_VERTEX_GEMINI_MODEL
 from devassist.models.context import ContextItem, SourceType
 from datetime import datetime
 
@@ -18,7 +19,7 @@ class TestVertexAIClient:
         """Should initialize with default configuration."""
         client = VertexAIClient()
 
-        assert client.model == "gemini-1.5-flash"
+        assert client.model == DEFAULT_VERTEX_GEMINI_MODEL
         assert client.max_retries == 3
         assert client.timeout_seconds == 60
 
@@ -33,6 +34,10 @@ class TestVertexAIClient:
         assert client.project_id == "my-project"
         assert client.location == "us-east1"
         assert client.model == "gemini-1.5-pro"
+
+    def test_strips_trailing_junk_from_project_id(self) -> None:
+        client = VertexAIClient(project_id="my-gcp-project)")
+        assert client.project_id == "my-gcp-project"
 
     @pytest.mark.asyncio
     async def test_summarize_returns_string(self) -> None:

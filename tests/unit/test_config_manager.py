@@ -60,6 +60,22 @@ class TestConfigManager:
 
         assert loaded.ai.project_id == "env-project"
 
+    def test_anthropic_vertex_project_id_fallback(self, tmp_path: Path) -> None:
+        """Brief AI config should use ANTHROPIC_VERTEX_PROJECT_ID when YAML has no project."""
+        workspace = tmp_path / ".devassist"
+        manager = ConfigManager(workspace_dir=workspace)
+
+        config = AppConfig(workspace_dir=str(workspace))
+        manager.save_config(config)
+
+        with patch.dict(
+            "os.environ",
+            {"ANTHROPIC_VERTEX_PROJECT_ID": "itpc-gcp-ai-eng-claude)"},
+        ):
+            loaded = manager.load_config()
+
+        assert loaded.ai.project_id == "itpc-gcp-ai-eng-claude"
+
     def test_get_source_config_returns_none_when_not_configured(
         self, tmp_path: Path
     ) -> None:
