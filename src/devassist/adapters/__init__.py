@@ -10,15 +10,11 @@ from devassist.adapters.errors import (
     SourceUnavailableError,
 )
 from devassist.adapters.github import GitHubAdapter
-from devassist.adapters.gmail import GmailAdapter
 from devassist.adapters.jira import JiraAdapter
-from devassist.adapters.slack import SlackAdapter
 from devassist.models.context import SourceType
 
 # Adapter registry for factory lookup
 ADAPTER_REGISTRY: dict[SourceType, type[ContextSourceAdapter]] = {
-    SourceType.GMAIL: GmailAdapter,
-    SourceType.SLACK: SlackAdapter,
     SourceType.JIRA: JiraAdapter,
     SourceType.GITHUB: GitHubAdapter,
 }
@@ -67,8 +63,6 @@ __all__ = [
     "AuthenticationError",
     "RateLimitError",
     "SourceUnavailableError",
-    "GmailAdapter",
-    "SlackAdapter",
     "JiraAdapter",
     "GitHubAdapter",
     "get_adapter",

@@ -1,7 +1,7 @@
 # DevAssist - AI-Powered Developer Assistant
 
-A Python CLI application that aggregates context from multiple developer tools (GitHub, Jira, Slack) and uses AI to provide:
-- **Morning Briefs** - Consolidated summaries of your PRs, issues, and messages
+A Python CLI application that aggregates context from multiple developer tools (GitHub, Jira) and uses AI to provide:
+- **Morning Briefs** - Consolidated summaries of your PRs and issues
 - **Interactive Chat** - Ask questions about your work in natural language
 - **Background Daemon** - Scheduled briefs at 8am, 1pm, and 5pm
 
@@ -9,7 +9,6 @@ A Python CLI application that aggregates context from multiple developer tools (
 
 - **GitHub Integration** - PRs needing review, issues assigned to you, notifications
 - **Jira/Atlassian Integration** - Open issues, sprint status, recent updates
-- **Slack Integration** - Unread messages, mentions, channel activity
 - **Interactive REPL** - `devassist chat` for continuous conversation
 - **Background Daemon** - Runs in background, generates scheduled briefs
 
@@ -155,7 +154,7 @@ The daemon generates briefs at:
 src/devassist/
 ├── cli/           # Typer CLI commands (ask, chat, setup)
 ├── core/          # Business logic (aggregator, ranker, brief_generator)
-├── adapters/      # Context source adapters (gmail, slack, jira, github)
+├── adapters/      # Context source adapters (jira, github)
 ├── mcp/           # MCP client and server registry
 ├── orchestrator/  # LLM orchestration agent
 ├── ai/            # Vertex AI integration
@@ -226,8 +225,6 @@ ruff check src/
 | `ATLASSIAN_BASE_URL` | No | Optional; for `devassist brief` Jira adapter (not MCP remote) |
 | `ATLASSIAN_EMAIL` | No | Optional; same |
 | `ATLASSIAN_API_TOKEN` | No | Optional; same |
-| `SLACK_BOT_TOKEN` | No | Slack bot token (xoxb-...) |
-| `SLACK_TEAM_ID` | No | Slack workspace ID |
 
 *Either Anthropic API key OR Vertex AI config required
 

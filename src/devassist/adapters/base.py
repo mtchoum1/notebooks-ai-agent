@@ -13,7 +13,7 @@ from devassist.models.context import ContextItem, SourceType
 class ContextSourceAdapter(ABC):
     """Abstract base class for all context source adapters.
 
-    Each adapter connects to a specific service (Gmail, Slack, JIRA, GitHub)
+    Each adapter connects to a specific service (JIRA, GitHub)
     and retrieves context items for the morning brief.
     """
 
@@ -33,7 +33,7 @@ class ContextSourceAdapter(ABC):
         """Get human-readable name for this source.
 
         Returns:
-            Display name string (e.g., 'Gmail', 'Slack').
+            Display name string (e.g., 'JIRA', 'GitHub').
         """
         ...
 

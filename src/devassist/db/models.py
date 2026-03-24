@@ -10,7 +10,7 @@ import json
 class BriefItem:
     """Individual item in a brief."""
     
-    source: str  # github, jira, slack
+    source: str  # github, jira
     item_type: str  # issue, pr, message, notification
     title: str
     priority: str  # high, medium, low

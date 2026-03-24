@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Singlarity** (DevAssist) is a Python CLI application that aggregates context from multiple developer tools (Gmail, Slack, JIRA, GitHub) and uses **Claude Agent SDK** to generate intelligent morning briefs. The project uses **Model Context Protocol (MCP) servers** for context sources and features a **unified AppConfig architecture** with **static session management**.
+**Singlarity** (DevAssist) is a Python CLI application that aggregates context from multiple developer tools (JIRA, GitHub) and uses **Claude Agent SDK** to generate intelligent morning briefs. The project uses **Model Context Protocol (MCP) servers** for context sources and features a **unified AppConfig architecture** with **static session management**.
 
 ## Development Commands
 
@@ -90,7 +90,7 @@ export GITHUB_TOKEN="your-github-token"
 
 # Generate morning brief
 devassist brief
-devassist brief --sources gmail,slack     # specific sources
+devassist brief --sources jira,github     # specific sources
 devassist brief --model "Opus 4"         # user-friendly AI model names
 devassist brief --resume                 # continue previous conversation
 devassist brief --session-id session-123 # use specific session
@@ -124,7 +124,7 @@ src/devassist/
 ├── ai/          # Claude Agent SDK integration and AI clients (claude_client, vertex_client, base_client)
 ├── cli/         # Typer CLI commands (main, config, brief, ai) - presentation layer
 ├── core/        # Business logic (aggregator, ranker, brief_generator, runner)
-├── adapters/    # Context source adapters (gmail, slack, jira, github)
+├── adapters/    # Context source adapters (jira, github)
 ├── models/      # Pydantic data models (config_unified, brief, context, mcp_config)
 ├── resources/   # System prompts, MCP server configurations
 ├── preferences/ # Preference learning system
@@ -160,8 +160,6 @@ The architecture follows modern patterns for maintainability and extensibility:
 
 Context sources are accessed through **Model Context Protocol (MCP) servers** configured in `resources/mcp_servers.yaml`:
 
-- **Gmail**: OAuth2-based email access
-- **Slack**: Bot/user token integration
 - **JIRA**: API token authentication
 - **GitHub**: Personal access token
 
@@ -223,8 +221,8 @@ The `.mcp.json` file is the primary configuration format supporting MCP servers,
     "sources": []
   },
   "sources": {
-    "gmail": { "enabled": true },
-    "slack": { "bot_token": "${SLACK_BOT_TOKEN}" }
+    "jira": { "enabled": true },
+    "github": { "enabled": true }
   },
   "preferences": {
     "priority_keywords": ["urgent", "critical"]
@@ -232,7 +230,7 @@ The `.mcp.json` file is the primary configuration format supporting MCP servers,
 }
 ```
 
-**Environment Variable Expansion**: Use `${VAR_NAME}` syntax to reference environment variables for source configuration (like `${SLACK_BOT_TOKEN}`). Undefined variables expand to empty string.
+**Environment Variable Expansion**: Use `${VAR_NAME}` syntax to reference environment variables for source configuration (for example `${GITHUB_TOKEN}`). Undefined variables expand to empty string.
 
 **Authentication**: Claude Agent SDK handles AI authentication automatically - no manual API key configuration required.
 
@@ -252,8 +250,6 @@ All data is stored locally in `~/.devassist/`:
 ├── logs/
 │   └── runner.log       # Background runner logs
 ├── cache/               # Source-specific caches (15-min TTL)
-│   ├── gmail/
-│   ├── slack/
 │   ├── jira/
 │   └── github/
 ├── briefs/              # Historical briefs
@@ -419,7 +415,7 @@ When implementing features:
 - ✅ **Testing**: 45+ comprehensive tests covering new architecture
 - ✅ **Background AI Runner**: Claude SDK integration with background processing
 - ✅ **MCP Configuration**: .mcp.json format with environment variable expansion
-- 🚧 **Context Source Adapters**: Gmail, Slack, JIRA, GitHub implementations
+- 🚧 **Context Source Adapters**: JIRA, GitHub implementations
 - ⏳ **MCP Server Deployment**: Actual server implementations (planned)
 - ⏳ **Preference Learning**: User priority learning (planned)
 - ⏳ **Advanced Features**: EC2 management, auto-responses (planned)
@@ -446,7 +442,7 @@ When implementing features:
 ### 🚧 **Partially Implemented**
 - MCP server configurations (defined but servers need deployment)
 - Legacy config commands (show deprecation notices)
-- Context source adapter implementations (Gmail, Slack, JIRA, GitHub)
+- Context source adapter implementations (JIRA, GitHub)
 
 ### ⏳ **Planned Features**
 - Live MCP server deployments

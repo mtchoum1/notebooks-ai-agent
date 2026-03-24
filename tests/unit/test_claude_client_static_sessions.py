@@ -37,7 +37,7 @@ class TestClaudeClientStaticSessions:
             session_id="test-session-1",
             created_at=datetime.now(),
             last_used=datetime.now(),
-            resources=["gmail", "jira"],
+            resources=["github", "jira"],
         )
         ClaudeClient._session_store["test-session-1"] = session1
 
@@ -63,7 +63,7 @@ class TestClaudeClientStaticSessions:
             session_id="persistent-session",
             created_at=datetime.now(),
             last_used=datetime.now(),
-            resources=["slack"],
+            resources=["github"],
         )
         ClaudeClient._session_store["persistent-session"] = session
 
@@ -90,7 +90,7 @@ class TestClaudeClientStaticSessions:
             session_id="session-1",
             created_at=datetime.now(),
             last_used=datetime.now(),
-            resources=["gmail"],
+            resources=["jira"],
         )
         ClaudeClient._session_store["session-1"] = session1
 
@@ -122,7 +122,7 @@ class TestClaudeClientStaticSessions:
                 session_id=f"session-{i}",
                 created_at=datetime.now(),
                 last_used=datetime.now(),
-                resources=["gmail"],
+                resources=["jira"],
             )
             ClaudeClient._session_store[f"session-{i}"] = session
 
@@ -149,7 +149,7 @@ class TestClaudeClientStaticSessions:
                 session_id=f"session-{i}",
                 created_at=datetime.now(),
                 last_used=datetime.now(),
-                resources=["gmail"],
+                resources=["jira"],
             )
             ClaudeClient._session_store[f"session-{i}"] = session
 
@@ -176,7 +176,7 @@ class TestClaudeClientStaticSessions:
                 session_id=f"session-{i}",
                 created_at=datetime.now(),
                 last_used=datetime.now(),
-                resources=["gmail"],
+                resources=["jira"],
             )
             ClaudeClient._session_store[f"session-{i}"] = session
 
@@ -203,7 +203,7 @@ class TestClaudeClientStaticSessions:
             session_id="session-old",
             created_at=base_time,
             last_used=base_time,
-            resources=["gmail"],
+            resources=["jira"],
         )
 
         session2 = ClaudeSession(

@@ -5,7 +5,7 @@
 
 ## Overview
 
-All context source adapters must implement this contract to ensure consistent behavior across Gmail, Slack, JIRA, and GitHub integrations.
+All context source adapters must implement this contract to ensure consistent behavior across JIRA and GitHub integrations.
 
 ## Abstract Base Class
 
@@ -115,7 +115,7 @@ class ConnectionTestResult:
     success: bool
     message: str
     latency_ms: int | None = None
-    user_info: str | None = None  # e.g., email for Gmail
+    user_info: str | None = None  # e.g., display name for the connected account
 ```
 
 ### ConfigField
@@ -190,20 +190,6 @@ For each adapter implementation:
 - [ ] Documents required scopes/permissions
 
 ## Source-Specific Notes
-
-### Gmail Adapter
-
-- Uses `google-auth-oauthlib` for OAuth2
-- Fetches from `INBOX` label by default
-- Filters to unread + last 24 hours for morning brief
-- Relevance based on: sender, labels, thread length
-
-### Slack Adapter
-
-- Supports both bot token and user OAuth
-- Fetches from channels user is member of
-- Filters to mentions + DMs + threads user is in
-- Relevance based on: @mentions, reactions, recency
 
 ### JIRA Adapter
 

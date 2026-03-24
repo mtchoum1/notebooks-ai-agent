@@ -10,7 +10,6 @@ from datetime import datetime
 from pathlib import Path
 
 from devassist.ai.claude_client import ClaudeClient
-from devassist.core.slack_client import SlackClient
 from devassist.models.config import ClientConfig
 from devassist.resources import get_dev_assistant_system_prompt
 
@@ -34,7 +33,6 @@ class Runner:
         custom_prompt: str | None = None,
         output_file: Path | str | None = None,
         session_id: str | None = None,
-        enable_slack: bool = True,
     ) -> None:
         """Initialize the background runner.
 
@@ -44,7 +42,6 @@ class Runner:
             custom_prompt: Custom prompt to execute.
             output_file: Output file path.
             session_id: Existing session ID to continue conversations. If None, creates new session.
-            enable_slack: Whether to send notifications via Slack (uses env vars for tokens).
         """
         self.config = config or ClientConfig()
         if not self.config.system_prompt:
@@ -52,17 +49,6 @@ class Runner:
         self.claude_client = ClaudeClient(config=self.config)
         self.interval_minutes = interval_minutes
         self.custom_prompt = custom_prompt or "Review my recent context and summarize urgent items requiring attention."
-
-        # Initialize Slack client if enabled
-        self.enable_slack = enable_slack
-        self.slack_client = None
-        if enable_slack:
-            try:
-                self.slack_client = SlackClient()
-                logger.info("Slack notifications enabled")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Slack client: {e}")
-                self.enable_slack = False
 
         if output_file is None:
             output_file = self.config.workspace_dir / "runner-output.md"
@@ -173,17 +159,6 @@ class Runner:
                     session_id=self.session_id
                 )
 
-                # Send Slack notification if enabled
-                if self.enable_slack and self.slack_client and len(response) > 0:
-                    try:
-                        await self.slack_client.send_devassist_notification(
-                            title="Devassist Action Summary",
-                            content=response
-                        )
-                        logger.debug("Slack notification sent successfully")
-                    except Exception as slack_error:
-                        logger.warning(f"Failed to send Slack notification: {slack_error}")
-
                 # Write to output file
                 await self._write_output(timestamp, response)
                 logger.debug("Prompt execution completed")
@@ -199,8 +174,7 @@ class Runner:
 
 Due to large data volume, please provide ONLY:
 1. Most urgent JIRA issues assigned to me (max 3)
-2. Critical emails from today (max 2)
-3. Any high-priority Slack notifications
+2. Highest-priority GitHub PRs or issues needing my attention (max 2)
 
 Keep response under 300 words total."""
 

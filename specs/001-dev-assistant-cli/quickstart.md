@@ -39,21 +39,6 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 The workspace directory (~/.devassist/) is created automatically when you add your first source.
 
-#### Gmail
-
-```bash
-# Start OAuth2 flow (opens browser)
-devassist config add gmail
-# Follow the interactive prompts to authorize access
-```
-
-#### Slack
-
-```bash
-# Interactive setup - will prompt for bot token or OAuth
-devassist config add slack
-```
-
 #### JIRA
 
 ```bash
@@ -80,8 +65,6 @@ devassist config list
 devassist config test
 
 # Expected output:
-# ✓ gmail: connected (user@gmail.com)
-# ✓ slack: connected (workspace: MyCompany)
 # ✓ jira: connected (project: PROJ)
 # ✓ github: connected (user: username)
 ```
@@ -95,7 +78,7 @@ devassist config test
 devassist brief
 
 # Brief with specific sources
-devassist brief --sources gmail,jira
+devassist brief --sources jira,github
 
 # Force refresh (ignore cache)
 devassist brief --refresh
@@ -111,7 +94,7 @@ devassist brief --json
 devassist config list
 
 # Remove a source
-devassist config remove slack
+devassist config remove jira
 
 # Test connections
 devassist config test
@@ -122,9 +105,7 @@ devassist config test
 ```bash
 $ devassist brief
 
-⏳ Fetching context from 4 sources...
-  ✓ gmail (12 items, 0.8s)
-  ✓ slack (8 items, 0.5s)
+⏳ Fetching context from 2 sources...
   ✓ jira (5 items, 0.6s)
   ✓ github (3 items, 0.4s)
 
@@ -137,7 +118,7 @@ $ devassist brief
 📌 Highlights
   • PR #142 needs your review (GitHub, @teammate)
   • PROJ-456 blocked on API approval (JIRA, High Priority)
-  • Team standup in 30 minutes (Gmail, calendar)
+  • Team standup in 30 minutes (calendar)
 
 🔴 Urgent (3)
   1. Security patch review requested - PR #142
@@ -165,7 +146,7 @@ Generated in 2.3s | 28 items processed | Cache expires in 15m
 
 ```bash
 # Check connection to a specific source
-devassist config test gmail
+devassist config test jira
 
 # Check all configured sources
 devassist config test

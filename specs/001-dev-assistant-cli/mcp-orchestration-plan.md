@@ -21,9 +21,7 @@ src/devassist/
 │   └── servers/                  # Built-in MCP server configs
 │       ├── __init__.py
 │       ├── github.py             # GitHub MCP server config
-│       ├── slack.py              # Slack MCP server config
 │       ├── jira.py               # JIRA MCP server config
-│       └── gmail.py              # Gmail MCP server config
 ├── orchestrator/                 # NEW: Orchestration agent
 │   ├── __init__.py
 │   ├── agent.py                  # Main orchestration agent
@@ -77,7 +75,7 @@ Responsibilities:
 ```python
 @dataclass
 class MCPServerConfig:
-    name: str                    # e.g., "github", "slack"
+    name: str                    # e.g., "github", "jira"
     command: str                 # e.g., "npx", "uvx"
     args: list[str]              # e.g., ["-y", "@modelcontextprotocol/server-github"]
     env: dict[str, str]          # e.g., {"GITHUB_TOKEN": "..."}
@@ -191,14 +189,13 @@ class LLMClient:
 3. MCP Client provides available tools:
    [
      {"name": "github_list_notifications", "description": "...", "parameters": {...}},
-     {"name": "slack_list_messages", "description": "...", "parameters": {...}},
      {"name": "jira_get_issues", "description": "...", "parameters": {...}},
    ]
 
 4. LLM receives:
    - System Prompt: "You are a developer assistant. Use tools to help users..."
    - User Prompt: "What are my unread GitHub notifications?"
-   - Tools: [github_list_notifications, slack_list_messages, jira_get_issues]
+   - Tools: [github_list_notifications, jira_get_issues]
 
 5. LLM responds with tool call:
    {
@@ -236,18 +233,11 @@ MCPServerConfig(
     env={"GITHUB_PERSONAL_ACCESS_TOKEN": "..."},
 )
 
-# Slack MCP Server  
-MCPServerConfig(
-    name="slack",
-    command="npx", 
-    args=["-y", "@modelcontextprotocol/server-slack"],
-    env={"SLACK_BOT_TOKEN": "...", "SLACK_TEAM_ID": "..."},
-)
 ```
 
 ### Option B: Build Custom MCP Servers
 
-For services without existing MCP servers (JIRA, Gmail), build custom ones:
+For services without existing MCP servers (some JIRA setups), build custom ones:
 
 ```python
 # Custom JIRA MCP Server (Python)
@@ -285,7 +275,6 @@ def ask(prompt: str):
 
 # Example usage:
 # devassist ask "What are my GitHub notifications?"
-# devassist ask "Show me Slack messages from today"
 # devassist ask "What JIRA tickets are assigned to me?"
 # devassist ask "Give me a morning brief"  # Uses multiple tools
 ```
@@ -300,8 +289,6 @@ def ask(prompt: str):
 2. **Phase 2: Registry & Multi-Server**
    - Implement MCPRegistry
    - Support connecting to multiple servers
-   - Add Slack MCP server
-
 3. **Phase 3: Orchestration Agent**
    - Implement LLMClient with tool calling
    - Implement OrchestrationAgent
@@ -333,8 +320,8 @@ dependencies = [
    - Start with stdio for simplicity
 
 3. **Custom vs Community MCP Servers**: Build your own or use existing?
-   - Start with community servers (GitHub, Slack exist)
-   - Build custom for JIRA, Gmail
+   - Start with community servers (e.g. GitHub) where available
+   - Build or configure custom servers for JIRA as needed
 
 4. **Agentic Loop Depth**: How many tool call iterations allowed?
    - Suggest max 5 iterations to prevent runaway

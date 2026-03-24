@@ -56,12 +56,6 @@ echo "Get a Personal Access Token from: https://github.com/settings/tokens"
 echo "Required scopes: repo, notifications"
 prompt_credential "GITHUB_PERSONAL_ACCESS_TOKEN" "GitHub Personal Access Token:"
 
-echo -e "\n${BLUE}=== Slack Configuration ===${NC}"
-echo "Create a Slack App at: https://api.slack.com/apps"
-echo "Get Bot Token from: OAuth & Permissions > Bot User OAuth Token"
-prompt_credential "SLACK_BOT_TOKEN" "Slack Bot Token (xoxb-...):"
-prompt_credential "SLACK_TEAM_ID" "Slack Team/Workspace ID:"
-
 echo -e "\n${BLUE}=== Atlassian Rovo MCP Configuration (Jira/Confluence) ===${NC}"
 echo "Uses official Atlassian Rovo MCP Server with OAuth authentication."
 echo "On first use, you'll authenticate via your browser."
@@ -94,10 +88,6 @@ cat > "$ENV_FILE" << EOF
 # GitHub
 export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
 
-# Slack
-export SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN"
-export SLACK_TEAM_ID="$SLACK_TEAM_ID"
-
 # Atlassian Rovo MCP (Jira/Confluence/Compass)
 # Uses OAuth - will prompt for browser authentication on first use
 export ATLASSIAN_SITE_URL="$ATLASSIAN_SITE_URL"
@@ -121,15 +111,6 @@ source "$VENV_DIR/bin/activate" 2>/dev/null || true
 if [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
     echo -n "  GitHub: "
     if curl -s -H "Authorization: Bearer $GITHUB_PERSONAL_ACCESS_TOKEN" https://api.github.com/user | grep -q '"login"'; then
-        echo -e "${GREEN}✓ Connected${NC}"
-    else
-        echo -e "${RED}✗ Failed${NC}"
-    fi
-fi
-
-if [ -n "$SLACK_BOT_TOKEN" ]; then
-    echo -n "  Slack: "
-    if curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" https://slack.com/api/auth.test | grep -q '"ok":true'; then
         echo -e "${GREEN}✓ Connected${NC}"
     else
         echo -e "${RED}✗ Failed${NC}"

@@ -7,7 +7,7 @@
 
 ## Overview
 
-A Python CLI application that serves as an intelligent developer assistant, aggregating context from multiple sources (Gmail, Slack, JIRA, GitHub/GitLab, AI Workspace, Org Charts/LDAP) to provide actionable insights and automate routine tasks. The CLI-first architecture enables future UI extensions (Slack bot, web app, etc.) through a shared service layer.
+A Python CLI application that serves as an intelligent developer assistant, aggregating context from multiple sources (JIRA, GitHub/GitLab, AI Workspace, Org Charts/LDAP) to provide actionable insights and automate routine tasks. The CLI-first architecture enables future UI extensions (web app, etc.) through a shared service layer.
 
 ## Clarifications
 
@@ -16,7 +16,7 @@ A Python CLI application that serves as an intelligent developer assistant, aggr
 - Q: Credential storage method? → A: Unencrypted local config file (development only, with warning displayed to user)
 - Q: Context cache TTL? → A: 15 minutes - balanced freshness and API efficiency
 - Q: AI model provider for MVP? → A: GCP Vertex AI (Gemini models)
-- Q: Minimum viable context sources for MVP? → A: Gmail, Slack, JIRA, and GitHub (communication + developer workflow)
+- Q: Minimum viable context sources for MVP? → A: JIRA and GitHub (developer workflow)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -30,7 +30,7 @@ As a developer starting my workday, I want to receive a consolidated summary of 
 
 **Acceptance Scenarios**:
 
-1. **Given** the user has configured at least one context source (e.g., Gmail), **When** they run the morning brief command, **Then** they receive a formatted summary of relevant items from that source within 30 seconds.
+1. **Given** the user has configured at least one context source (e.g., JIRA), **When** they run the morning brief command, **Then** they receive a formatted summary of relevant items from that source within 30 seconds.
 
 2. **Given** the user has configured multiple context sources, **When** they run the morning brief command, **Then** all sources are queried and results are merged into a prioritized, coherent summary.
 
@@ -42,7 +42,7 @@ As a developer starting my workday, I want to receive a consolidated summary of 
 
 ### User Story 2 - Context Source Configuration (Priority: P1)
 
-As a developer, I want to configure which context sources to connect (Gmail, Slack, JIRA, GitHub, etc.) so the assistant can access my relevant data.
+As a developer, I want to configure which context sources to connect (JIRA, GitHub, etc.) so the assistant can access my relevant data.
 
 **Why this priority**: Required foundation for all other features - without context source configuration, no aggregation is possible.
 
@@ -116,7 +116,7 @@ As a developer with cloud development environments, I want to start/stop my EC2 
 
 ### User Story 6 - Auto-Response Draft (Priority: P3)
 
-As a developer receiving routine inquiries, I want the assistant to draft responses to emails/Slack messages that I can review and approve before sending (human-in-the-loop).
+As a developer receiving routine inquiries, I want the assistant to draft responses to routine messages that I can review and approve before sending (human-in-the-loop).
 
 **Why this priority**: Advanced feature requiring robust context understanding and user trust - better to nail fundamentals first.
 
@@ -163,47 +163,45 @@ As a developer preparing for performance discussions, I want to generate notes s
 ### Functional Requirements
 
 #### Core Infrastructure
-- **FR-001**: System MUST provide a CLI interface using a command/subcommand structure (e.g., `devassist brief`, `devassist config add gmail`)
+- **FR-001**: System MUST provide a CLI interface using a command/subcommand structure (e.g., `devassist brief`, `devassist config add jira`)
 - **FR-002**: System MUST store all working data in a configurable local workspace directory
 - **FR-003**: System MUST support configuration via environment variables, config files, and CLI flags (in order of precedence)
 - **FR-004**: System MUST store credentials in a local config file (unencrypted for development) and display a security warning on startup
 - **FR-005**: System MUST provide clear, actionable error messages for all failure modes
 
-#### Context Integration (MVP: Gmail, Slack, JIRA, GitHub)
+#### Context Integration (MVP: JIRA, GitHub)
 - **FR-006**: System MUST support pluggable context source adapters with a consistent interface
-- **FR-007**: System MUST support Gmail context integration via OAuth2 *(MVP)*
-- **FR-008**: System MUST support Slack context integration via OAuth2 or bot token *(MVP)*
-- **FR-009**: System MUST support JIRA context integration via API token *(MVP)*
-- **FR-010**: System MUST support GitHub context integration via personal access tokens *(MVP)*
-- **FR-010a**: System MAY support GitLab context integration via personal access tokens *(post-MVP)*
-- **FR-011**: System MAY support LDAP/org chart data integration for stakeholder lookup *(post-MVP)*
-- **FR-012**: System MUST cache fetched context data locally with a 15-minute TTL to reduce API calls and enable offline reference
+- **FR-007**: System MUST support JIRA context integration via API token *(MVP)*
+- **FR-008**: System MUST support GitHub context integration via personal access tokens *(MVP)*
+- **FR-009**: System MAY support GitLab context integration via personal access tokens *(post-MVP)*
+- **FR-010**: System MAY support LDAP/org chart data integration for stakeholder lookup *(post-MVP)*
+- **FR-011**: System MUST cache fetched context data locally with a 15-minute TTL to reduce API calls and enable offline reference
 
 #### AI Integration
-- **FR-013**: System MUST integrate with GCP Vertex AI (Gemini models) for summarization and inference
-- **FR-014**: System MUST optimize context sent to AI models to stay within token limits
-- **FR-015**: System MUST support configurable AI model selection within the Vertex AI Gemini family
-- **FR-016**: System MUST persist conversation memory across sessions for continuity
+- **FR-012**: System MUST integrate with GCP Vertex AI (Gemini models) for summarization and inference
+- **FR-013**: System MUST optimize context sent to AI models to stay within token limits
+- **FR-014**: System MUST support configurable AI model selection within the Vertex AI Gemini family
+- **FR-015**: System MUST persist conversation memory across sessions for continuity
 
 #### Preference Learning
-- **FR-017**: System MUST capture explicit user feedback (thumbs up/down, priority flags)
-- **FR-018**: System MUST apply learned preferences to future result ranking
-- **FR-019**: Users MUST be able to view, modify, and reset their preference profile
+- **FR-016**: System MUST capture explicit user feedback (thumbs up/down, priority flags)
+- **FR-017**: System MUST apply learned preferences to future result ranking
+- **FR-018**: Users MUST be able to view, modify, and reset their preference profile
 
 #### Utilities
-- **FR-020**: System MUST support AWS EC2 instance state management (start/stop/status) for designated sandbox instances
-- **FR-021**: System MUST generate human-in-the-loop draft responses with explicit approval workflow
-- **FR-022**: System MUST generate periodic summary reports (quarterly notes) from aggregated work data
+- **FR-019**: System MUST support AWS EC2 instance state management (start/stop/status) for designated sandbox instances
+- **FR-020**: System MUST generate human-in-the-loop draft responses with explicit approval workflow
+- **FR-021**: System MUST generate periodic summary reports (quarterly notes) from aggregated work data
 
 #### Architecture
-- **FR-023**: System MUST separate CLI interface from core service logic to enable future UI additions
-- **FR-024**: System MUST support running as a containerized application with mounted workspace directory
-- **FR-025**: System MUST provide an evaluation harness for testing tool outcomes and scoring results
+- **FR-022**: System MUST separate CLI interface from core service logic to enable future UI additions
+- **FR-023**: System MUST support running as a containerized application with mounted workspace directory
+- **FR-024**: System MUST provide an evaluation harness for testing tool outcomes and scoring results
 
 #### Development Process (TDD)
-- **FR-026**: All feature implementation MUST follow TDD: write failing test first, implement minimal code to pass, then refactor
-- **FR-027**: No production code may be written without a corresponding failing test
-- **FR-028**: Code coverage MUST maintain minimum 80% for core/ and adapters/ modules
+- **FR-025**: All feature implementation MUST follow TDD: write failing test first, implement minimal code to pass, then refactor
+- **FR-026**: No production code may be written without a corresponding failing test
+- **FR-027**: Code coverage MUST maintain minimum 80% for core/ and adapters/ modules
 
 ### Key Entities
 
@@ -242,7 +240,7 @@ As a developer preparing for performance discussions, I want to generate notes s
 ## Out of Scope
 
 - Web UI or graphical interface (CLI-first for this release)
-- Slack bot interface (future UI layer addition)
+- Third-party chat bot integrations (future UI layer addition)
 - Real-time notifications or push updates (pull-based for CLI)
 - Multi-user or team-wide deployments (single-user focus)
 - Meeting scheduling automation (reserved for future iteration)

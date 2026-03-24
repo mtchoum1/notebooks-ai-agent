@@ -190,8 +190,6 @@ class BriefGenerator:
             Human-readable name.
         """
         display_names = {
-            SourceType.GMAIL: "Gmail",
-            SourceType.SLACK: "Slack",
             SourceType.JIRA: "JIRA",
             SourceType.GITHUB: "GitHub",
         }

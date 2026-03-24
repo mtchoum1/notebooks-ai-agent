@@ -64,7 +64,7 @@ Represents a configured integration with an external service.
 | Field | Type | Description | Constraints |
 |-------|------|-------------|-------------|
 | id | str | Unique identifier | UUID, auto-generated |
-| type | SourceType | Type of source | Enum: GMAIL, SLACK, JIRA, GITHUB |
+| type | SourceType | Type of source | Enum: JIRA, GITHUB |
 | name | str | Display name | User-defined, optional |
 | enabled | bool | Whether source is active | Default: true |
 | config | dict | Source-specific configuration | Varies by type |
@@ -75,8 +75,6 @@ Represents a configured integration with an external service.
 
 **Source-specific config fields**:
 
-- Gmail: `scopes`, `token_file`
-- Slack: `bot_token` or `user_token`, `channels` (optional filter)
 - JIRA: `url`, `email`, `project_keys` (optional filter)
 - GitHub: `token`, `repos` (optional filter), `include_notifications`
 
@@ -100,8 +98,6 @@ A single piece of information retrieved from a source.
 
 **Source-specific metadata**:
 
-- Gmail: `labels`, `thread_id`, `is_unread`, `attachments_count`
-- Slack: `channel`, `thread_ts`, `reactions`, `is_mention`
 - JIRA: `issue_key`, `status`, `priority`, `assignee`, `project`
 - GitHub: `repo`, `type` (PR/issue/notification), `state`
 
@@ -170,7 +166,7 @@ A pending auto-generated response awaiting approval.
 | Field | Type | Description | Constraints |
 |-------|------|-------------|-------------|
 | id | str | Unique identifier | UUID |
-| source_type | SourceType | Where to send | GMAIL or SLACK |
+| source_type | SourceType | Where to send | JIRA or GITHUB |
 | original_message | str | The message being replied to | |
 | original_context | dict | Full context for reply | Thread, channel, etc. |
 | draft | str | Generated response text | |
@@ -184,8 +180,6 @@ A pending auto-generated response awaiting approval.
 
 ```python
 class SourceType(str, Enum):
-    GMAIL = "gmail"
-    SLACK = "slack"
     JIRA = "jira"
     GITHUB = "github"
 
@@ -248,9 +242,6 @@ All entities are stored as JSON in the workspace directory:
 ├── sources/
 │   └── sources.json     # ContextSource records
 ├── cache/
-│   ├── gmail/
-│   │   └── {hash}.json  # Cached ContextItems
-│   ├── slack/
 │   ├── jira/
 │   └── github/
 ├── briefs/

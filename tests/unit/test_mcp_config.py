@@ -109,13 +109,13 @@ class TestRunnerConfig:
             interval_minutes=10,
             prompt="Custom prompt",
             status="running",
-            sources=["gmail", "slack"],
+            sources=["jira", "github"],
         )
         assert config.enabled is True
         assert config.interval_minutes == 10
         assert config.prompt == "Custom prompt"
         assert config.status == "running"
-        assert config.sources == ["gmail", "slack"]
+        assert config.sources == ["jira", "github"]
 
     def test_invalid_status_raises_error(self) -> None:
         """Should raise validation error for invalid status."""
@@ -176,7 +176,7 @@ class TestMCPConfig:
                 "interval_minutes": 10,
             },
             "sources": {
-                "gmail": {"enabled": True},
+                "jira": {"enabled": True},
             },
         }
         config = MCPConfig(**data)
@@ -186,7 +186,7 @@ class TestMCPConfig:
         assert config.ai.claude.api_key == "sk-ant-test"
         assert config.runner.enabled is True
         assert config.runner.interval_minutes == 10
-        assert "gmail" in config.sources
+        assert "jira" in config.sources
 
 
 class TestEnvVarExpansion:

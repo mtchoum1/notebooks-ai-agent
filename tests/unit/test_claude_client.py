@@ -21,12 +21,12 @@ class TestClaudeSession:
             session_id="test-session-123",
             created_at=datetime.now(),
             last_used=datetime.now(),
-            resources=["gmail", "slack"],
+            resources=["jira", "github"],
             turns=0,
         )
 
         assert session.session_id == "test-session-123"
-        assert session.resources == ["gmail", "slack"]
+        assert session.resources == ["jira", "github"]
         assert session.turns == 0
 
     def test_claude_session_serialization(self):
@@ -36,13 +36,13 @@ class TestClaudeSession:
             session_id="test-session-123",
             created_at=now,
             last_used=now,
-            resources=["gmail"],
+            resources=["jira"],
             turns=5,
         )
 
         data = session.to_dict()
         assert data["session_id"] == "test-session-123"
-        assert data["resources"] == ["gmail"]
+        assert data["resources"] == ["jira"]
         assert data["turns"] == 5
         assert "created_at" in data
         assert "last_used" in data
@@ -53,13 +53,13 @@ class TestClaudeSession:
             "session_id": "test-session-123",
             "created_at": datetime.now().isoformat(),
             "last_used": datetime.now().isoformat(),
-            "resources": ["gmail", "slack"],
+            "resources": ["jira", "github"],
             "turns": 3,
         }
 
         session = ClaudeSession.from_dict(data)
         assert session.session_id == "test-session-123"
-        assert session.resources == ["gmail", "slack"]
+        assert session.resources == ["jira", "github"]
         assert session.turns == 3
 
 
@@ -78,10 +78,10 @@ class TestClaudeClient:
         from devassist.models.context import SourceType
 
         config = ClientConfig(
-            sources=[SourceType.GMAIL, SourceType.SLACK],
+            sources=[SourceType.JIRA, SourceType.GITHUB],
             source_configs={
-                "gmail": {"enabled": True, "credentials_file": "/path/to/gmail.json"},
-                "slack": {"enabled": True, "token": "xoxb-test-token"},
+                "jira": {"enabled": True, "url": "https://issues.example.com"},
+                "github": {"enabled": True, "token": "ghp-test-token"},
             }
         )
         return config
@@ -117,11 +117,11 @@ class TestClaudeClient:
         """Test creating a new Claude session."""
         with patch.object(client._sdk_client, "connect", new_callable=AsyncMock) as mock_connect:
             session = await client.create_session(
-                resources=["gmail", "slack"], output_format="markdown"
+                resources=["jira", "github"], output_format="markdown"
             )
 
             assert session.session_id is not None
-            assert session.resources == ["gmail", "slack"]
+            assert session.resources == ["jira", "github"]
             assert session.turns == 0
             mock_connect.assert_called_once()
 
@@ -154,7 +154,7 @@ class TestClaudeClient:
         """Test making a call with an existing session ID."""
         # First create a session
         with patch.object(client._sdk_client, "connect", new_callable=AsyncMock):
-            session = await client.create_session(resources=["gmail"])
+            session = await client.create_session(resources=["jira"])
 
         # Now make a call with that session
         with patch.object(client._sdk_client, "query", new_callable=AsyncMock), patch.object(
@@ -180,7 +180,7 @@ class TestClaudeClient:
         """Test resuming an existing session."""
         # Create a session first
         with patch.object(client._sdk_client, "connect", new_callable=AsyncMock):
-            original_session = await client.create_session(resources=["gmail"])
+            original_session = await client.create_session(resources=["jira"])
             original_session.turns = 5
 
         # Store it
@@ -205,7 +205,7 @@ class TestClaudeClient:
         """Test compacting a conversation."""
         # Create a session
         with patch.object(client._sdk_client, "connect", new_callable=AsyncMock):
-            session = await client.create_session(resources=["gmail"])
+            session = await client.create_session(resources=["jira"])
 
         # Compact it (implementation would use Claude SDK's compact feature)
         with patch("devassist.ai.claude_client.logger") as mock_logger:
@@ -218,7 +218,7 @@ class TestClaudeClient:
         """Test clearing a session."""
         # Create a session
         with patch.object(client._sdk_client, "connect", new_callable=AsyncMock):
-            session = await client.create_session(resources=["gmail"])
+            session = await client.create_session(resources=["jira"])
 
         # Clear it
         await client.clear_session(session.session_id)
@@ -234,14 +234,14 @@ class TestClaudeClient:
             session_id="session-1",
             created_at=datetime.now(),
             last_used=datetime.now(),
-            resources=["gmail"],
+            resources=["jira"],
             turns=0,
         )
         session2 = ClaudeSession(
             session_id="session-2",
             created_at=datetime.now(),
             last_used=datetime.now(),
-            resources=["slack"],
+            resources=["github"],
             turns=0,
         )
 
@@ -264,14 +264,14 @@ class TestClaudeClient:
             session_id="session-1",
             created_at=now - timedelta(hours=2),
             last_used=now - timedelta(hours=1),
-            resources=["gmail"],
+            resources=["jira"],
             turns=0,
         )
         session2 = ClaudeSession(
             session_id="session-2",
             created_at=now - timedelta(hours=1),
             last_used=now,  # Most recent
-            resources=["slack"],
+            resources=["github"],
             turns=0,
         )
 

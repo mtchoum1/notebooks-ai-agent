@@ -96,13 +96,6 @@ class MCPRegistry:
             env={"GITHUB_PERSONAL_ACCESS_TOKEN": ""},
             description="GitHub integration - repos, issues, PRs, notifications",
         ),
-        "gmail": MCPServerConfig(
-            name="gmail",
-            command=_NPX,
-            args=["-y", "@modelcontextprotocol/server-google-drive"],
-            env={"GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": "", "GOOGLE_REDIRECT_URI": ""},
-            description="Gmail/Google Drive integration - emails, documents",
-        ),
         "filesystem": MCPServerConfig(
             name="filesystem",
             command=_NPX,

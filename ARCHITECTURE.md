@@ -201,7 +201,7 @@ Response + Updated Session State
 ## Configuration Management
 
 ### Priority Order (Highest to Lowest)
-1. **CLI Arguments**: `--sources gmail,slack`
+1. **CLI Arguments**: `--sources jira,github`
 2. **Environment Variables**: `DEVASSIST_AI_MODEL=fast`
 3. **Configuration Files**: `~/.devassist/config.yaml`
 4. **Defaults**: Sensible fallbacks
@@ -432,11 +432,9 @@ flowchart TD
 
     L --> M[JIRA MCP Server]
     L --> N[GitHub MCP Server]
-    L --> O[Future: Gmail MCP Server]
 
     M --> P[Claude Agent SDK]
     N --> P
-    O --> P
 
     P --> Q[Claude API Call]
     Q --> R[AI Processing]
@@ -465,7 +463,6 @@ flowchart TD
     G --> H[DEVASSIST_RUNNER_INTERVAL]
     G --> I[DEVASSIST_RUNNER_PROMPT]
     G --> J[DEVASSIST_RUNNER_SESSION_ID]
-    G --> K[DEVASSIST_RUNNER_ENABLE_SLACK]
 
     E --> L[Subprocess: run_background_runner]
     F --> M[Direct Runner Creation]
@@ -487,7 +484,6 @@ flowchart TD
     W --> X[MCP Servers]
     X --> Y[Response Processing]
     Y --> Z[Write to Output File]
-    Z --> AA[Optional: Slack Notification]
 
     style A fill:#e1f5fe
     style C fill:#fff3e0

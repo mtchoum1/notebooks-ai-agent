@@ -50,7 +50,6 @@ def run_background_runner() -> None:
     interval_minutes = int(os.environ.get("DEVASSIST_RUNNER_INTERVAL", "5"))
     custom_prompt = os.environ.get("DEVASSIST_RUNNER_PROMPT")
     session_id = os.environ.get("DEVASSIST_RUNNER_SESSION_ID")
-    enable_slack = os.environ.get("DEVASSIST_RUNNER_ENABLE_SLACK", "true").lower() == "true"
 
     # ✅ If no session_id from env, try to read from file (session continuity)
     if not session_id:
@@ -74,7 +73,6 @@ def run_background_runner() -> None:
         interval_minutes=interval_minutes,
         custom_prompt=custom_prompt,
         output_file=config.workspace_dir / "runner-output.md", # Explicit output file like working test
-        enable_slack=enable_slack,
         session_id = session_id
     )
 
@@ -210,7 +208,6 @@ def run(
         help="Session ID to continue conversation",
     ),
     foreground: bool = typer.Option(False, "--foreground", "-f", help="Run in foreground"),
-    enable_slack: bool = typer.Option(True, "--enable-slack/--disable-slack", help="Enable Slack notifications"),
 ) -> None:
     """Start the background AI runner."""
     runner_manager = RunnerManager()
@@ -247,7 +244,6 @@ def run(
                 custom_prompt=prompt,
                 output_file=config.workspace_dir / "runner-output.md",  # Explicit output file like working test
                 session_id=session_id,  # ✅ Pass session_id for continuity
-                enable_slack=enable_slack,  # ✅ Pass enable_slack from CLI
             )
 
             console.print(f"[green]✓[/green] Runner created (Session: {runner.session_id})")
@@ -285,7 +281,7 @@ def run(
     else:
         # Start as background process
         try:
-            runner_manager.start(interval=interval, prompt=prompt, session_id=session_id, enable_slack=enable_slack)
+            runner_manager.start(interval=interval, prompt=prompt, session_id=session_id)
             status = runner_manager.get_status()
             console.print(f"[green]✓[/green] AI runner started successfully")
             console.print(f"[dim]PID: {status.pid}[/dim]")

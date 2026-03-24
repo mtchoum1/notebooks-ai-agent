@@ -127,7 +127,6 @@ class RunnerManager:
         interval: int | None = None,
         prompt: str | None = None,
         session_id: str | None = None,
-        enable_slack: bool = True,
     ) -> None:
         """Start the background runner process.
 
@@ -135,7 +134,6 @@ class RunnerManager:
             interval: Interval in minutes between executions.
             prompt: Custom prompt to execute.
             session_id: Session ID to continue conversation.
-            enable_slack: Whether to enable Slack notifications.
 
         Raises:
             RuntimeError: If runner is already running or cannot acquire lock.
@@ -162,7 +160,7 @@ class RunnerManager:
 
             # Log which critical environment variables are available
             critical_vars = ["JIRA_PERSONAL_TOKEN",
-                           "JIRA_USERNAME", "GITHUB_TOKEN", "SLACK_USER_ID"]
+                           "JIRA_USERNAME", "GITHUB_TOKEN"]
 
             for var in critical_vars:
                 if var in env:
@@ -176,8 +174,6 @@ class RunnerManager:
                 env["DEVASSIST_RUNNER_PROMPT"] = prompt
             if session_id is not None:
                 env["DEVASSIST_RUNNER_SESSION_ID"] = session_id
-            # ✅ Fix missing environment variable
-            env["DEVASSIST_RUNNER_ENABLE_SLACK"] = "true" if enable_slack else "false"
 
             process = subprocess.Popen(
                 [

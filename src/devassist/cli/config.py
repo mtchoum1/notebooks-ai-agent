@@ -31,7 +31,7 @@ console = Console()
 def add_source(
     source: str = typer.Argument(
         ...,
-        help="Source type to add (gmail, slack, jira, github)",
+        help="Source type to add (jira, github)",
     ),
 ) -> None:
     """Add and configure a new context source.
@@ -63,8 +63,6 @@ def add_source(
         # Provide helpful prompts based on field name
         if field == "credentials_file":
             prompt = "Path to OAuth credentials.json file"
-        elif field == "bot_token":
-            prompt = "Slack Bot Token (xoxb-...)"
         elif field == "api_token":
             prompt = "JIRA API Token"
         elif field == "personal_access_token":
@@ -148,7 +146,7 @@ def list_sources() -> None:
 def remove_source(
     source: str = typer.Argument(
         ...,
-        help="Source to remove (gmail, slack, jira, github)",
+        help="Source to remove (jira, github)",
     ),
     force: bool = typer.Option(
         False,
@@ -185,7 +183,7 @@ def remove_source(
 def test_source(
     source: Optional[str] = typer.Argument(
         None,
-        help="Source to test (gmail, slack, jira, github). Tests all if not specified.",
+        help="Source to test (jira, github). Tests all if not specified.",
     ),
 ) -> None:
     """Test connection to configured context sources."""

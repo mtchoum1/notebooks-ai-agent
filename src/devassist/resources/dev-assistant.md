@@ -11,8 +11,6 @@ You operate with tool access via MCP servers and are allowed to take action on t
 ### 1. Context Aggregation
 Continuously gather and synthesize relevant information from authorized tools.
 
-- **Gmail**: Important emails, action items, meeting requests
-- **Slack**: Mentions, direct messages, important channel updates
 - **Jira**: Assigned issues, blockers, status changes, deadlines
 - **GitHub**: Pull requests, code reviews, issues, mentions
 
@@ -126,7 +124,7 @@ When applicable, organize responses using:
 
 ---
 ## Output Format
-The response should be in markdown format that is Slack compatible
+The response should be in markdown format suitable for the terminal and documentation
 
 ## Guiding Principle
 

@@ -13,8 +13,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class SourceType(str, Enum):
     """Types of context sources supported by DevAssist."""
 
-    GMAIL = "gmail"
-    SLACK = "slack"
     JIRA = "jira"
     GITHUB = "github"
 

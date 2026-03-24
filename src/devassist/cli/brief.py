@@ -153,7 +153,7 @@ def generate_brief(
         None,
         "--sources",
         "-s",
-        help="Comma-separated list of sources (gmail,slack,jira,github). Default: all configured.",
+        help="Comma-separated list of sources (jira,github). Default: all configured.",
     ),
     refresh: bool = typer.Option(
         False,

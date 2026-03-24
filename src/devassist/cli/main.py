@@ -44,7 +44,7 @@ def main(
     """DevAssist - Developer Assistant CLI.
 
     An AI-powered CLI that aggregates context from multiple developer tools
-    (Gmail, Slack, JIRA, GitHub) and generates a Unified Morning Brief.
+    (JIRA, GitHub) and generates a Unified Morning Brief.
     """
     # Security warning is shown contextually by commands that handle credentials
     pass

@@ -80,16 +80,6 @@ echo "Get a Personal Access Token from: https://github.com/settings/tokens"
 echo "Required scopes: repo, notifications"
 read -p "GitHub Personal Access Token: " GITHUB_PERSONAL_ACCESS_TOKEN
 
-# Slack Configuration (optional)
-echo ""
-echo -e "${CYAN}Slack Configuration (optional)${NC}"
-echo "Create a Slack App at: https://api.slack.com/apps"
-echo "Or press Enter to skip"
-read -p "Slack Bot Token (xoxb-...): " SLACK_BOT_TOKEN
-if [ -n "$SLACK_BOT_TOKEN" ]; then
-    read -p "Slack Team ID: " SLACK_TEAM_ID
-fi
-
 # Save configuration
 echo ""
 echo -e "${GREEN}Saving configuration...${NC}"
@@ -106,10 +96,6 @@ export ANTHROPIC_VERTEX_PROJECT_ID="$ANTHROPIC_VERTEX_PROJECT_ID"
 
 # GitHub
 export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN"
-
-# Slack (optional)
-export SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN"
-export SLACK_TEAM_ID="$SLACK_TEAM_ID"
 
 # LLM Provider (using anthropic client with Vertex backend)
 export LLM_PROVIDER="anthropic"
@@ -149,16 +135,6 @@ if [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
     if curl -s -H "Authorization: Bearer $GITHUB_PERSONAL_ACCESS_TOKEN" https://api.github.com/user | grep -q '"login"'; then
         GITHUB_USER=$(curl -s -H "Authorization: Bearer $GITHUB_PERSONAL_ACCESS_TOKEN" https://api.github.com/user | grep '"login"' | cut -d'"' -f4)
         echo -e "${GREEN}✓ Connected as $GITHUB_USER${NC}"
-    else
-        echo -e "${RED}✗ Failed${NC}"
-    fi
-fi
-
-# Test Slack
-if [ -n "$SLACK_BOT_TOKEN" ]; then
-    echo -n "  Slack: "
-    if curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" https://slack.com/api/auth.test | grep -q '"ok":true'; then
-        echo -e "${GREEN}✓ Connected${NC}"
     else
         echo -e "${RED}✗ Failed${NC}"
     fi

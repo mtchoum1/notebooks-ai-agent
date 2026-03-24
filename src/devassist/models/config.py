@@ -3,10 +3,23 @@
 Defines application configuration structures.
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+
+logger = logging.getLogger(__name__)
+
+
+def get_system_prompt() -> str:
+    """Default system prompt loader (patch target for unit tests)."""
+    try:
+        from devassist.resources import get_dev_assistant_system_prompt
+
+        return get_dev_assistant_system_prompt()
+    except Exception:
+        return "You are a helpful developer assistant."
 
 # Vertex AI: gemini-1.5-* IDs are retired; use a current stable Flash model ID.
 DEFAULT_VERTEX_GEMINI_MODEL = "gemini-2.0-flash-001"
@@ -86,3 +99,6 @@ class AppConfig(BaseModel):
     def get_workspace_path(self) -> Path:
         """Get expanded workspace path."""
         return Path(self.workspace_dir).expanduser()
+
+
+from devassist.models.client_config import ClientConfig  # noqa: E402

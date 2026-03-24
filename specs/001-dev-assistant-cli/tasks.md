@@ -76,23 +76,23 @@ Based on plan.md structure:
 
 ## Phase 3: User Story 2 - Context Source Configuration (Priority: P1) - PREREQUISITE
 
-**Goal**: Enable users to configure context sources (Gmail, Slack, JIRA, GitHub) - Required before US1
+**Goal**: Enable users to configure context sources (JIRA, GitHub) - Required before US1
 
-**Independent Test**: Run `devassist config add gmail` and verify OAuth flow completes, credentials stored
+**Independent Test**: Run `devassist config add jira` and verify credentials stored
 
 **Note**: US2 is implemented before US1 because Morning Brief depends on configured sources
 
 ### Tests for User Story 2 (TDD - Write First, Must Fail)
 
-- [ ] T025 [P] [US2] Write failing integration test for Gmail OAuth flow in tests/integration/test_gmail_adapter.py
-- [ ] T026 [P] [US2] Write failing integration test for Slack auth in tests/integration/test_slack_adapter.py
+- [ ] T025 [P] [US2] Write failing integration test for JIRA auth in tests/integration/test_jira_adapter.py
+- [ ] T026 [P] [US2] Write failing integration test for GitHub auth in tests/integration/test_github_adapter.py
 - [ ] T027 [P] [US2] Write failing integration test for JIRA auth in tests/integration/test_jira_adapter.py
 - [ ] T028 [P] [US2] Write failing integration test for GitHub auth in tests/integration/test_github_adapter.py
 
 ### Implementation for User Story 2
 
-- [ ] T029 [P] [US2] Implement GmailAdapter with OAuth2 flow in src/devassist/adapters/gmail.py
-- [ ] T030 [P] [US2] Implement SlackAdapter with bot token auth in src/devassist/adapters/slack.py
+- [ ] T029 [P] [US2] Implement JiraAdapter in src/devassist/adapters/jira.py
+- [ ] T030 [P] [US2] Implement GitHubAdapter in src/devassist/adapters/github.py
 - [ ] T031 [P] [US2] Implement JiraAdapter with API token auth in src/devassist/adapters/jira.py
 - [ ] T032 [P] [US2] Implement GitHubAdapter with PAT auth in src/devassist/adapters/github.py
 - [ ] T033 [US2] Implement config add command in src/devassist/cli/config.py (guided setup per source)
@@ -101,7 +101,7 @@ Based on plan.md structure:
 - [ ] T036 [US2] Implement config test command in src/devassist/cli/config.py (validate connections)
 - [ ] T037 [US2] Add adapter factory for source type lookup in src/devassist/adapters/__init__.py
 
-**Checkpoint**: User Story 2 complete. Verify: `devassist config add gmail`, `devassist config list`, `devassist config test`
+**Checkpoint**: User Story 2 complete. Verify: `devassist config add jira`, `devassist config list`, `devassist config test`
 
 ---
 
@@ -252,7 +252,7 @@ Based on plan.md structure:
 - [ ] T087 [US6] Implement DraftGenerator in src/devassist/core/draft_generator.py
 - [ ] T088 [US6] Implement draft command with approval workflow in src/devassist/cli/draft.py
 - [ ] T089 [US6] Add --approve and --reject flags in src/devassist/cli/draft.py
-- [ ] T090 [US6] Implement send functionality for Gmail/Slack in src/devassist/core/draft_generator.py
+- [ ] T090 [US6] Implement send functionality for supported channels in src/devassist/core/draft_generator.py
 
 **Checkpoint**: User Story 6 complete. Verify: Draft generation, approval workflow, and send.
 
@@ -365,7 +365,7 @@ T044: BriefSummary model
 2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
 3. Complete Phase 3: User Story 2 (Config) - must have sources to query
 4. Complete Phase 4: User Story 1 (Brief) - core value proposition
-5. **STOP and VALIDATE**: Run `devassist config add gmail`, then `devassist brief`
+5. **STOP and VALIDATE**: Run `devassist config add jira`, then `devassist brief`
 6. Deploy/demo if ready - **This is your hackathon MVP!**
 
 ### Incremental Delivery

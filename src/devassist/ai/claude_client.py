@@ -11,8 +11,8 @@ from datetime import datetime
 from typing import Any, ClassVar
 from devassist.resources import get_mcp_servers_config
 
-from devassist.models import McpServerConfig
 from devassist.models.config import ClientConfig
+from devassist.models.mcp_config import McpServerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class ClaudeClient:
         """Get MCP servers configuration for specified resources.
 
         Args:
-            resources: List of resource names (gmail, slack, jira, github).
+            resources: List of resource names (jira, github, etc.).
                       If None, returns all configured sources.
 
         Returns:

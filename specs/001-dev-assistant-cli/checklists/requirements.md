@@ -41,7 +41,7 @@
 
 3. **Success Criteria**: All SC items are measurable and user-focused (e.g., "under 60 seconds", "80% rated useful", "fewer than 2 edits").
 
-4. **Scope Boundaries**: Clear "Out of Scope" section defines what's NOT included (Slack bot, web UI, meeting scheduling, etc.).
+4. **Scope Boundaries**: Clear "Out of Scope" section defines what's NOT included (third-party chat bots, web UI, meeting scheduling, etc.).
 
 5. **Edge Cases**: Five specific edge cases identified with expected system behavior.
 

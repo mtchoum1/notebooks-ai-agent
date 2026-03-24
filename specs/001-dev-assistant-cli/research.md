@@ -35,34 +35,6 @@
 
 ## Context Source Authentication
 
-### Gmail (OAuth2)
-
-**Decision**: Use google-auth-oauthlib for OAuth2 flow with local redirect
-
-**Rationale**:
-- Standard Google OAuth2 flow with browser redirect to localhost
-- Tokens stored in local config file (per clarification: unencrypted for dev)
-- Refresh tokens handled automatically by google-auth
-
-**Scopes Required**:
-- `https://www.googleapis.com/auth/gmail.readonly` - Read emails
-- `https://www.googleapis.com/auth/gmail.labels` - Read labels for filtering
-
-### Slack (OAuth2 or Bot Token)
-
-**Decision**: Support both OAuth2 (user token) and Bot Token (simpler)
-
-**Rationale**:
-- Bot tokens are simpler for personal use (just paste token)
-- OAuth2 needed for full user context (DMs, all channels)
-- Start with bot token for MVP, add OAuth2 flow later
-
-**Scopes Required (Bot)**:
-- `channels:history` - Read public channel messages
-- `groups:history` - Read private channel messages
-- `im:history` - Read DMs
-- `users:read` - Get user info for @mentions
-
 ### JIRA (API Token)
 
 **Decision**: Basic auth with email + API token
@@ -102,10 +74,6 @@
 **Implementation**:
 ```python
 cache/
-├── gmail/
-│   └── {hash}.json
-├── slack/
-│   └── {hash}.json
 ├── jira/
 │   └── {hash}.json
 └── github/
@@ -154,7 +122,7 @@ Each cache file contains:
 **Decision**: Async with asyncio for I/O-bound operations
 
 **Rationale**:
-- Fetching from 4 sources benefits from concurrent I/O
+- Fetching from multiple sources benefits from concurrent I/O
 - httpx provides async HTTP client
 - Typer supports async commands
 - Vertex AI SDK supports async
@@ -163,8 +131,6 @@ Each cache file contains:
 ```python
 async def generate_brief():
     results = await asyncio.gather(
-        gmail_adapter.fetch(),
-        slack_adapter.fetch(),
         jira_adapter.fetch(),
         github_adapter.fetch(),
         return_exceptions=True
@@ -187,12 +153,6 @@ async def generate_brief():
 workspace_dir: ~/.devassist
 
 sources:
-  gmail:
-    enabled: true
-    credentials_file: gmail_token.json
-  slack:
-    enabled: true
-    bot_token: xoxb-...
   jira:
     enabled: true
     url: https://company.atlassian.net

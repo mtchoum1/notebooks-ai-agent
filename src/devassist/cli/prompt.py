@@ -99,7 +99,7 @@ def ask(
         None,
         "--sources",
         "-s",
-        help="Comma-separated list of sources (gmail,slack,jira,github). Default: all configured.",
+        help="Comma-separated list of sources (jira,github). Default: all configured.",
     ),
     session_id: Optional[str] = typer.Option(
         None,
@@ -121,14 +121,14 @@ def ask(
     """Ask Claude a custom question with access to your developer context.
 
     This command sends your custom prompt directly to Claude with access to
-    your configured MCP servers (Gmail, Slack, JIRA, GitHub, etc.).
+    your configured MCP servers (JIRA, GitHub, etc.).
 
     Unlike 'brief', this completely replaces the default morning brief prompt
     with your custom prompt.
 
     Examples:
       devassist prompt "What PRs need my review?"
-      devassist prompt "Summarize my emails from last week" --sources gmail
+      devassist prompt "Summarize my open Jira issues" --sources jira
       devassist prompt "What's blocking the frontend team?" --resume
     """
     if ctx.invoked_subcommand is not None:
@@ -211,9 +211,9 @@ devassist prompt "What deadlines are coming up this week?"
 
 ## Communication
 ```bash
-devassist prompt "Summarize important emails from yesterday"
+devassist prompt "Summarize notifications that need a reply"
 devassist prompt "What meetings do I have today?"
-devassist prompt "Are there any urgent Slack messages I missed?"
+devassist prompt "Any urgent follow-ups from GitHub or Jira?"
 ```
 
 ## Team Coordination
@@ -238,7 +238,6 @@ devassist prompt "Follow up on the deployment question" --session-id abc123
 
 ## Source-Specific Queries
 ```bash
-devassist prompt "What's in my Gmail today?" --sources gmail
 devassist prompt "JIRA status update" --sources jira
 devassist prompt "GitHub activity summary" --sources github
 ```

@@ -42,31 +42,31 @@ class TestClientConfigValidation:
 
     def test_sources_parsing_from_string(self):
         """Should parse sources from comma-separated string."""
-        config = ClientConfig(sources="gmail,jira")
-        assert SourceType.GMAIL in config.resolved_sources
+        config = ClientConfig(sources="github,jira")
+        assert SourceType.GITHUB in config.resolved_sources
         assert SourceType.JIRA in config.resolved_sources
         assert len(config.resolved_sources) == 2
 
     def test_sources_parsing_invalid_sources(self):
         """Should skip invalid sources with warning."""
         with patch('devassist.models.config.logger') as mock_logger:
-            config = ClientConfig(sources="gmail,invalid_source,jira")
-            assert SourceType.GMAIL in config.resolved_sources
+            config = ClientConfig(sources="github,invalid_source,jira")
+            assert SourceType.GITHUB in config.resolved_sources
             assert SourceType.JIRA in config.resolved_sources
             assert len(config.resolved_sources) == 2
             mock_logger.warning.assert_called_once_with("Unknown source type: invalid_source")
 
     def test_sources_empty_defaults_to_all_available(self):
         """Should default to all available sources when empty."""
-        with patch.object(ClientConfig, 'get_available_sources', return_value=[SourceType.GMAIL, SourceType.SLACK]):
+        with patch.object(ClientConfig, 'get_available_sources', return_value=[SourceType.JIRA, SourceType.GITHUB]):
             config = ClientConfig(sources="")
-            assert config.resolved_sources == [SourceType.GMAIL, SourceType.SLACK]
+            assert config.resolved_sources == [SourceType.JIRA, SourceType.GITHUB]
 
             config = ClientConfig(sources=[])
-            assert config.resolved_sources == [SourceType.GMAIL, SourceType.SLACK]
+            assert config.resolved_sources == [SourceType.JIRA, SourceType.GITHUB]
 
             config = ClientConfig()  # None sources
-            assert config.resolved_sources == [SourceType.GMAIL, SourceType.SLACK]
+            assert config.resolved_sources == [SourceType.JIRA, SourceType.GITHUB]
 
     def test_ai_model_user_friendly_mapping(self):
         """Should resolve user-friendly AI model names."""
@@ -150,19 +150,18 @@ class TestClientConfigComputedFields:
     def test_enabled_sources(self):
         """Should return only enabled sources."""
         config = ClientConfig(
-            sources=[SourceType.GMAIL, SourceType.SLACK],
+            sources=[SourceType.JIRA, SourceType.GITHUB],
             source_configs={
-                "gmail": {"enabled": True},
-                "slack": {"enabled": False},
-                "jira": {"enabled": True},  # Not in sources list
+                "jira": {"enabled": True},
+                "github": {"enabled": False},
             }
         )
-        assert config.enabled_sources == [SourceType.GMAIL]
+        assert config.enabled_sources == [SourceType.JIRA]
 
     def test_enabled_sources_defaults_to_true(self):
         """Should default to enabled if not specified."""
-        config = ClientConfig(sources=[SourceType.GMAIL, SourceType.JIRA])
-        assert config.enabled_sources == [SourceType.GMAIL, SourceType.JIRA]
+        config = ClientConfig(sources=[SourceType.GITHUB, SourceType.JIRA])
+        assert config.enabled_sources == [SourceType.GITHUB, SourceType.JIRA]
 
     def test_resolved_system_prompt_default(self):
         """Should return default system prompt when None."""
@@ -218,8 +217,6 @@ class TestClientConfigSourcesHandling:
             sources = ClientConfig.get_available_sources()
             # Should fallback to all source types
             assert len(sources) == len(SourceType)
-            assert SourceType.GMAIL in sources
-            assert SourceType.SLACK in sources
             assert SourceType.JIRA in sources
             assert SourceType.GITHUB in sources
 
@@ -230,13 +227,13 @@ class TestClientConfigCLIIntegration:
     def test_from_cli_args_basic(self):
         """Should create config from CLI arguments."""
         config = ClientConfig.from_cli_args(
-            sources="gmail,jira",
+            sources="github,jira",
             model="Opus 4",
             timeout=120,
             output_format="json"
         )
 
-        assert SourceType.GMAIL in config.resolved_sources
+        assert SourceType.GITHUB in config.resolved_sources
         assert SourceType.JIRA in config.resolved_sources
         assert config.ai_model == "claude-opus-4-1@20250805"
         assert config.ai_timeout_seconds == 120
@@ -265,7 +262,7 @@ class TestClientConfigCLIIntegration:
             config_data = {
                 "ai_model": "Sonnet 4",
                 "source_configs": {
-                    "gmail": {"enabled": True}
+                    "github": {"enabled": True}
                 }
             }
             with open(config_path, "w") as f:
@@ -280,21 +277,21 @@ class TestClientConfigCLIIntegration:
 
             assert config.ai_model == "claude-opus-4-1@20250805"  # CLI override
             assert SourceType.JIRA in config.resolved_sources  # CLI override
-            assert config.source_configs == {"gmail": {"enabled": True}}  # From file
+            assert config.source_configs == {"github": {"enabled": True}}  # From file
 
     def test_from_cli_args_env_var_overrides(self):
         """Should apply environment variable overrides."""
         with patch.dict(os.environ, {
             "DEVASSIST_AI_MODEL": "fast",
             "DEVASSIST_AI_TIMEOUT_SECONDS": "180",
-            "DEVASSIST_SOURCES": "gmail,slack"
+            "DEVASSIST_SOURCES": "github,jira"
         }):
             config = ClientConfig.from_cli_args()
 
             assert config.ai_model == "claude-sonnet-4-5@20250929"  # "fast"
             assert config.ai_timeout_seconds == 180
-            assert SourceType.GMAIL in config.resolved_sources
-            assert SourceType.SLACK in config.resolved_sources
+            assert SourceType.GITHUB in config.resolved_sources
+            assert SourceType.JIRA in config.resolved_sources
 
 
 class TestClientConfigPersistence:
@@ -312,7 +309,7 @@ class TestClientConfigPersistence:
             config_path = Path(temp_dir) / "config.yaml"
             config_data = {
                 "ai_model": "Opus 4",
-                "sources": ["gmail", "jira"],
+                "sources": ["github", "jira"],
                 "ai_timeout_seconds": 120
             }
 
@@ -321,7 +318,7 @@ class TestClientConfigPersistence:
 
             loaded_data = ClientConfig.load_from_file(Path(temp_dir))
             assert loaded_data["ai_model"] == "Opus 4"
-            assert loaded_data["sources"] == ["gmail", "jira"]
+            assert loaded_data["sources"] == ["github", "jira"]
             assert loaded_data["ai_timeout_seconds"] == 120
 
     def test_save_to_file(self):
@@ -330,7 +327,7 @@ class TestClientConfigPersistence:
             config = ClientConfig(
                 workspace_dir=temp_dir,
                 ai_model="Opus 4",
-                sources=[SourceType.GMAIL, SourceType.JIRA],
+                sources=[SourceType.GITHUB, SourceType.JIRA],
                 ai_timeout_seconds=120
             )
 
@@ -346,7 +343,7 @@ class TestClientConfigPersistence:
             assert saved_data["ai_model"] == "claude-opus-4-1@20250805"  # Resolved
             # Sources is a list of SourceType values, need to check properly
             sources_values = [s.value if hasattr(s, 'value') else s for s in saved_data.get("sources", [])]
-            assert "gmail" in sources_values or SourceType.GMAIL in saved_data.get("sources", [])
+            assert "github" in sources_values or SourceType.GITHUB in saved_data.get("sources", [])
             assert "jira" in sources_values or SourceType.JIRA in saved_data.get("sources", [])
             assert saved_data["ai_timeout_seconds"] == 120
 
@@ -374,7 +371,7 @@ class TestClientConfigLegacyCompatibility:
         legacy_config = {
             "workspace_dir": "~/test",
             "ai": {"model": "test", "timeout_seconds": 30},
-            "sources": {"gmail": {"enabled": True}}
+            "sources": {"github": {"enabled": True}}
         }
 
         with pytest.warns(DeprecationWarning, match="from_legacy_config is deprecated"):

@@ -183,7 +183,7 @@ Uses Application Default Credentials (ADC):
 ```text
 You are a helpful assistant summarizing a developer's daily context.
 
-Given the following items from various sources (email, Slack, JIRA, GitHub),
+Given the following items from various sources (JIRA, GitHub),
 create a concise morning brief that:
 
 1. Highlights the 3-5 most important items requiring attention

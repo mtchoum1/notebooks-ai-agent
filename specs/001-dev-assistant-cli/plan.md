@@ -5,7 +5,7 @@
 
 ## Summary
 
-A Python CLI application that aggregates context from multiple developer tools (Gmail, Slack, JIRA, GitHub) and uses GCP Vertex AI (Gemini) to generate a Unified Morning Brief and other productivity features. Built with Typer/Click for CLI, using a modular adapter pattern for context sources, with local file-based caching and configuration.
+A Python CLI application that aggregates context from multiple developer tools (JIRA, GitHub) and uses GCP Vertex AI (Gemini) to generate a Unified Morning Brief and other productivity features. Built with Typer/Click for CLI, using a modular adapter pattern for context sources, with local file-based caching and configuration.
 
 ## Technical Context
 
@@ -75,8 +75,6 @@ src/
 │   ├── adapters/
 │   │   ├── __init__.py
 │   │   ├── base.py          # Abstract ContextSource
-│   │   ├── gmail.py         # Gmail adapter
-│   │   ├── slack.py         # Slack adapter
 │   │   ├── jira.py          # JIRA adapter
 │   │   └── github.py        # GitHub adapter
 │   ├── ai/
@@ -104,8 +102,8 @@ tests/
 │   ├── test_cache_manager.py
 │   └── test_preference_service.py
 ├── integration/
-│   ├── test_gmail_adapter.py
-│   ├── test_slack_adapter.py
+│   ├── test_jira_adapter.py
+│   ├── test_github_adapter.py
 │   ├── test_jira_adapter.py
 │   └── test_github_adapter.py
 └── contract/

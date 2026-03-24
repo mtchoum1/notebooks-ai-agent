@@ -133,7 +133,7 @@ class ConfigManager:
         """Get configuration for a specific source.
 
         Args:
-            source_name: Name of the source (e.g., 'gmail', 'slack').
+            source_name: Name of the source (e.g., 'jira', 'github').
 
         Returns:
             Source configuration dict or None if not configured.

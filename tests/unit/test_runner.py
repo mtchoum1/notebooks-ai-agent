@@ -35,7 +35,7 @@ class TestRunner:
                 "prompt": "Test prompt",
                 "output_destination": str(workspace / "runner-output.md"),
             },
-            sources={"gmail": {"enabled": True}},
+            sources={"jira": {"enabled": True}},
         )
 
     @pytest.fixture
@@ -80,9 +80,9 @@ class TestRunner:
         items = [
             ContextItem(
                 id="1",
-                source_id="gmail_1",
-                source_type=SourceType.GMAIL,
-                title="Test email",
+                source_id="jira_1",
+                source_type=SourceType.JIRA,
+                title="Test issue",
                 timestamp=datetime.now(),
             )
         ]
@@ -227,17 +227,17 @@ class TestRunner:
         items = [
             ContextItem(
                 id="1",
-                source_id="gmail_1",
-                source_type=SourceType.GMAIL,
+                source_id="jira_1",
+                source_type=SourceType.JIRA,
                 title="Email 1",
                 timestamp=datetime.now(),
                 relevance_score=0.9,
             ),
             ContextItem(
                 id="2",
-                source_id="slack_2",
-                source_type=SourceType.SLACK,
-                title="Message 2",
+                source_id="github_2",
+                source_type=SourceType.GITHUB,
+                title="PR 2",
                 timestamp=datetime.now(),
                 relevance_score=0.7,
             ),
