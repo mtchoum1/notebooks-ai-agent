@@ -17,19 +17,22 @@ A Python CLI application that aggregates context from multiple developer tools (
 
 ### 1. Clone and Install
 
+This project uses [uv](https://docs.astral.sh/uv/) for environments and installs (pinned via `uv.lock` and `.python-version`).
+
 ```bash
 # Clone the repository
 git clone https://github.com/ayush17/notebooks-ai-agent.git
 cd notebooks-ai-agent
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or: .venv\Scripts\activate  # Windows
+# Install uv (once per machine): https://docs.astral.sh/uv/getting-started/installation/
+# Then create .venv and install the project + dev dependencies
+uv sync --extra dev
 
-# Install in development mode
-pip install -e ".[dev]"
+# Run CLI without activating the venv explicitly
+uv run devassist --version
 ```
+
+Activation is optional — use `source .venv/bin/activate` if you prefer a traditional workflow. Without uv, use `pip install -e ".[dev]"` in a Python 3.11+ virtual environment instead.
 
 ### 2. Install MCP Servers
 
@@ -186,28 +189,27 @@ src/devassist/
 - The LLM needs guidance on GitHub search queries
 
 ### Command not found: devassist
-- Ensure you've activated the venv: `source .venv/bin/activate`
-- Reinstall: `pip install -e .`
+- Run `uv sync --extra dev` so `.venv` exists and the `devassist` console script is installed.
+- Or activate the venv and retry: `source .venv/bin/activate`
+- Without uv: `pip install -e .`
 
 ## Development
 
+Use `uv run` so tools use the project environment:
+
 ```bash
-# Run tests
-pytest
-
-# Run with coverage
-pytest --cov=devassist
-
-# Type checking
-mypy src/
-
-# Linting
-ruff check src/
+uv run pytest
+uv run pytest --cov=devassist
+uv run mypy src/
+uv run ruff check src/
 ```
+
+After changing dependencies in `pyproject.toml`, refresh the lockfile with `uv lock` and commit `uv.lock` alongside your edits.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.11+ (managed automatically when using uv with `.python-version`)
+- uv (recommended) — optional; pip still works with `pip install -e ".[dev]"`.
 - Node.js 18+ (for MCP servers)
 - **Claude AI access** (one of the following):
   - Anthropic API key from [console.anthropic.com](https://console.anthropic.com) (paid)
@@ -240,5 +242,5 @@ MIT License - see LICENSE file for details.
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests: `pytest`
+4. Run tests: `uv run pytest`
 5. Submit a pull request
