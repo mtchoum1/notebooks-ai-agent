@@ -77,6 +77,7 @@ def status() -> None:
 # Import and register sub-commands
 from devassist.cli.brief import app as brief_app
 from devassist.cli.config import app as config_app
+from devassist.cli.cve import app as cve_app
 from devassist.cli.ask import ask as ask_command
 from devassist.cli.chat import chat as chat_command
 from devassist.cli.setup import app as setup_app
@@ -84,6 +85,7 @@ from devassist.cli.setup import app as setup_app
 # Register subcommands
 app.add_typer(config_app, name="config")
 app.add_typer(brief_app, name="brief")
+app.add_typer(cve_app, name="cve", help="CVE workflow (Jira, mappings, fix plan)")
 app.add_typer(setup_app, name="setup", help="Configure DevAssist connections")
 app.command(name="ask")(ask_command)
 app.command(name="chat")(chat_command)

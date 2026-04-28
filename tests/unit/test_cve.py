@@ -11,6 +11,7 @@ from devassist.cve.jira_cve import build_cve_jql
 from devassist.cve.mapping_store import load_mappings, mappings_path, save_mappings
 from devassist.cve.models import ComponentMapping, RepoEntry
 from devassist.cve.scanner_hints import hints_for_repo_path
+from devassist.cve.artifacts import render_ai_triage_readme
 from devassist.cve.textutil import extract_cve_ids, issue_should_be_ignored
 
 
@@ -32,11 +33,76 @@ class TestIgnoreMarkers:
         assert issue_should_be_ignored(["skip this"], ("skip this",))
 
 
+class TestAiTriageReadme:
+    def test_groups_by_cve_and_dedupes_table(self) -> None:
+        body = render_ai_triage_readme(
+            component="MySvc",
+            jql='labels = "CVE"',
+            issues=[
+                {
+                    "key": "P-1",
+                    "summary": "Fix CVE-2024-1000",
+                    "cves": ["CVE-2024-1000"],
+                    "browse_url": "https://jira/browse/P-1",
+                    "status": "Open",
+                    "priority": "High",
+                    "issuetype": "Bug",
+                    "duedate": "2026-04-10",
+                    "labels": "CVE",
+                },
+                {
+                    "key": "P-2",
+                    "summary": "also CVE-2024-1000",
+                    "cves": ["CVE-2024-1000"],
+                    "browse_url": "https://jira/browse/P-2",
+                    "status": "To Do",
+                    "priority": "Medium",
+                    "issuetype": "Task",
+                    "duedate": "2026-05-01",
+                    "labels": "",
+                },
+            ],
+            generated_at_utc="2026-04-23T12:00:00Z",
+        )
+        assert body.count("## AI Retriage Update -") == 1
+        assert "CVE: CVE-2024-1000 —" in body
+        assert "Severity: High, Medium" in body
+        assert "Due date: 2026-04-10" in body
+        assert "Updated verdict: pending-triage" in body
+        assert "RHOAI Product Impact" in body
+        assert "Representative built-image evidence" in body
+        assert "Why this is still not AI-fixable" in body
+        assert "Recommended next step" in body
+        assert "P-1" in body and "P-2" in body
+        assert "nvd.nist.gov" in body
+
+    def test_bare_issues_section_when_no_cve_in_text(self) -> None:
+        body = render_ai_triage_readme(
+            component="C",
+            jql="x",
+            issues=[
+                {
+                    "key": "P-9",
+                    "summary": "no id here",
+                    "cves": [],
+                    "browse_url": "https://jira/browse/P-9",
+                    "status": "",
+                    "priority": "",
+                    "issuetype": "",
+                    "duedate": "",
+                    "labels": "",
+                }
+            ],
+            generated_at_utc="2026-04-23T12:00:00Z",
+        )
+        assert "without a CVE id" in body
+
+
 class TestBuildCveJql:
     def test_basic(self) -> None:
         jql = build_cve_jql(component="My Component", project_key=None, ignore_resolved=False)
         assert 'component = "My Component"' in jql
-        assert 'summary ~ "CVE-"' in jql
+        assert 'labels = "CVE"' in jql
 
     def test_escapes_quotes(self) -> None:
         jql = build_cve_jql(component='Foo "Bar"', project_key=None, ignore_resolved=False)

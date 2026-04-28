@@ -5,6 +5,7 @@ A Python CLI application that aggregates context from multiple developer tools (
 - **Morning Briefs** - Consolidated summaries of your PRs, issues, and messages
 - **Interactive Chat** - Ask questions about your work in natural language
 - **Background Daemon** - Scheduled briefs at 8am, 1pm, and 5pm
+- **CVE workflow** - Jira CVE discovery, component→repo mappings, GitHub duplicate-PR hints, AI Retriage markdown handoff
 
 ## Features
 
@@ -13,6 +14,7 @@ A Python CLI application that aggregates context from multiple developer tools (
 - **Slack Integration** - Unread messages, mentions, channel activity
 - **Interactive REPL** - `devassist chat` for continuous conversation
 - **Background Daemon** - Runs in background, generates scheduled briefs
+- **CVE remediation CLI** - `devassist cve find`, `fix-plan`, and `mappings` for ProdSec-style triage and routing ([CVE workflow](#cve-workflow-devassist-cve) below)
 
 ## Quick Start
 
@@ -74,8 +76,8 @@ export ANTHROPIC_VERTEX_PROJECT_ID=your-gcp-project
 # Scopes needed: repo, notifications, read:user
 export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_xxx"
 
-# Atlassian API (optional — only for `devassist brief` Jira/Confluence adapters;
-# `devassist ask` / `chat -s atlassian` uses remote MCP and does not need these)
+# Atlassian API (optional — for `devassist brief` Jira adapters, `devassist cve find` / `fix-plan`,
+# and `devassist config add jira`; `devassist ask` / `chat -s atlassian` uses remote MCP and may not need these)
 # Get token: https://id.atlassian.com/manage-profile/security/api-tokens
 export ATLASSIAN_BASE_URL="https://your-site.atlassian.net"
 export ATLASSIAN_EMAIL="your-email@example.com"
@@ -106,16 +108,53 @@ devassist setup status
 ## Workspace directory (`~/.devassist`)
 
 
-| Path          | Purpose                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `env`         | Canonical shell-style exports (API keys, Atlassian URL, Vertex project, etc.).                                      |
-| `.env`        | Legacy mirror of `env` for existing scripts that `source ~/.devassist/.env`.                                        |
-| `config.yaml` | Non-secret app config: enabled sources, `**ai.provider**` / `**ai.project_id**` / region, MCP entries, preferences. |
-| `briefs/`     | Generated morning brief output (daemon).                                                                            |
-| `daemon.log`  | Daemon log file when using the background script.                                                                   |
-
+| Path | Purpose |
+| ---- | ------- |
+| `env` | Canonical shell-style exports (API keys, Atlassian URL, Vertex project, etc.). |
+| `.env` | Legacy mirror of `env` for scripts that `source ~/.devassist/.env`. |
+| `config.yaml` | Non-secret app config: enabled sources, `ai.provider` / `ai.project_id` / region, MCP entries, preferences. |
+| `briefs/` | Generated morning brief output (daemon). |
+| `daemon.log` | Daemon log file when using the background script. |
+| `cve/component-repository-mappings.json` | Component → GitHub repo routing for `fix-plan` (edit or `devassist cve mappings init-example`). |
+| `cve/artifacts/find/` | Timestamped reports from `devassist cve find` (`cve-issues-<timestamp>.md`). |
+| `cve/artifacts/triage/README.md` | **AI Retriage** output: stable path, **overwritten** each find — see [CVE workflow](#cve-workflow-devassist-cve). |
+| `cve/artifacts/fixes/` | Timestamped `cve-fix-<timestamp>.md` from `devassist cve fix-plan`. |
 
 ## Usage
+
+### CVE workflow (`devassist cve`)
+
+Jira REST credentials (`ATLASSIAN_*` in `~/.devassist/env` and/or `sources.jira` from `devassist config add jira`) drive **`cve find`** and **`cve fix-plan`**. A **GitHub PAT** (`GITHUB_PERSONAL_ACCESS_TOKEN`) is needed for **duplicate PR search** in `fix-plan`.
+
+**Finder** runs a paginated JQL search: issues must have **label `CVE`**, match the given **component**, and (by default) still include open work — optionally `project = "KEY"` and `--ignore-resolved` to drop Done. Tickets whose **comments** contain `cve-automation-ignore` (or extra strings from `--ignore-marker`) are skipped.
+
+```bash
+devassist cve find "My Component" -p MYPROJ              # project + component + label CVE
+devassist cve find "My Component" -r                     # exclude statusCategory Done
+devassist cve find "My Component" -m "skip-automation"   # extra comment skip marker (repeatable)
+```
+
+Each **find** writes:
+
+| Artifact | Path |
+| -------- | ---- |
+| Finder report | `~/.devassist/cve/artifacts/find/cve-issues-<timestamp>.md` |
+| AI Retriage README | `~/.devassist/cve/artifacts/triage/README.md` |
+
+CVE ids are parsed from each ticket’s **summary and description**. The **AI Retriage** file groups by CVE and uses a **fixed section order** per CVE: *AI Retriage Update – date*, title line (`CVE: … — …`), **Severity** (Jira priority), **Due date** (earliest ticket due date), **Updated verdict** (starts as `pending-triage`; replace with e.g. `ai-nonfixable`), **RHOAI Product Impact**, **Representative built-image evidence**, **Repo-side evidence**, **Why this is still not AI-fixable**, **Recommended next step**, **Additional note**, and a **ticket snapshot** table (status, priority, due date, labels).
+
+```bash
+cat ~/.devassist/cve/artifacts/triage/README.md
+```
+
+**Fix plan** resolves **component-repository-mappings.json**, searches GitHub for PRs mentioning each CVE, suggests **scanner hints** and temp clone paths — it does **not** run `git` or open PRs.
+
+```bash
+devassist cve mappings init-example    # sample JSON under ~/.devassist/cve/
+devassist cve mappings path
+devassist cve mappings validate
+devassist cve fix-plan PROJ-123 PROJ-456
+```
 
 ### Morning brief (`devassist brief`)
 
@@ -181,8 +220,9 @@ The daemon generates briefs at:
 
 ```
 src/devassist/
-├── cli/           # Typer CLI commands (ask, chat, setup)
-├── core/          # Business logic (aggregator, ranker, brief_generator)
+├── cli/           # Typer CLI (ask, chat, setup, brief, config, cve, …)
+├── core/          # Business logic (aggregator, ranker, brief_generator, config)
+├── cve/           # CVE find/fix-plan workflow, Jira JQL, triage artifacts, mappings
 ├── adapters/      # Context source adapters (gmail, slack, jira, github)
 ├── mcp/           # MCP client and server registry
 ├── orchestrator/  # LLM orchestration agent
@@ -263,10 +303,10 @@ Variables below can be stored in `**~/.devassist/env`** (recommended) or exporte
 | `DEVASSIST_AI_PROJECT_ID`      | No       | Overrides `ai.project_id` in YAML (Gemini / Vertex brief)                                                 |
 | `DEVASSIST_AI_LOCATION`        | No       | Overrides `ai.location` (GCP region for Gemini on Vertex)                                                 |
 | `DEVASSIST_AI_MODEL`           | No       | Overrides `ai.model` (Gemini model id)                                                                    |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | Yes      | GitHub PAT with repo, notifications scopes                                                                |
-| `ATLASSIAN_BASE_URL`           | No       | Optional; for `devassist brief` Jira adapter (not MCP remote)                                             |
-| `ATLASSIAN_EMAIL`              | No       | Optional; same                                                                                            |
-| `ATLASSIAN_API_TOKEN`          | No       | Optional; same                                                                                            |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | Yes      | GitHub PAT (repo scope); used by MCP/`ask`; `devassist cve fix-plan` needs it for duplicate PR search      |
+| `ATLASSIAN_BASE_URL`           | No       | Jira Cloud URL; required for `devassist cve` when not using only `config.yaml` jira source                   |
+| `ATLASSIAN_EMAIL`              | No       | Jira API user email                                                                                       |
+| `ATLASSIAN_API_TOKEN`          | No       | Jira API token                                                                                            |
 | `SLACK_BOT_TOKEN`              | No       | Slack bot token (xoxb-...)                                                                                |
 | `SLACK_TEAM_ID`                | No       | Slack workspace ID                                                                                        |
 
